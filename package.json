@@ -1,0 +1,17 @@
+{
+  "name": "super-admin-bros",
+  "version": "1.0.0",
+  "description": "Super Admin Bros. - IT Hero Platformer",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.1.4"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  }
+}
