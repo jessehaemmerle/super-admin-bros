@@ -19,8 +19,12 @@
       overflow: hidden;
     }
     canvas {
-      image-rendering: pixelated;
+      /* Keep pixel art crisp when upscaled. `pixelated` is listed last so
+         Chromium uses it (last valid declaration wins). */
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
       image-rendering: crisp-edges;
+      image-rendering: pixelated;
       display: block;
     }
   </style>

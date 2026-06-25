@@ -127,7 +127,10 @@ export class GameScene extends Phaser.Scene {
     this.scoreSystem = new ScoreSystem(this);
     this.scoreSystem.init(startLives);
 
-    this.physics.world.setBounds(0, 0, worldW, worldH);
+    // Extend the bottom of the physics world below the level so the player can
+    // actually FALL into pits (a death-plane check in update() then costs a life).
+    // Left/right/top stay bounded; the camera bounds remain at the real height.
+    this.physics.world.setBounds(0, 0, worldW, worldH + 240);
 
     this.enemyGroup        = this.physics.add.group();
     this.docGroup          = this.physics.add.staticGroup();
@@ -434,8 +437,11 @@ export class GameScene extends Phaser.Scene {
         if (died) this.handlePlayerDeath();
       }
       if (t?.index === 3) {
+        // Hit from below: by the time this callback runs, Arcade physics has
+        // already zeroed the upward velocity during separation, so we must test
+        // blocked.up (the player is pressing against the block) — NOT velocity.y.
         const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
-        if (playerBody.velocity.y < 0 && playerBody.blocked.up) {
+        if (playerBody.blocked.up) {
           const key = `${t.x},${t.y}`;
           if (!this.questionBlockStates.get(key)) {
             this.questionBlockStates.set(key, true);
@@ -806,6 +812,17 @@ export class GameScene extends Phaser.Scene {
         this.comboCount = 0;
         this.registry.set('comboCount', 0);
       }
+    }
+
+    // Pit death — fell below the level floor. Mark dead; the blocks below then
+    // route it through the normal life-loss / respawn flow.
+    const pitY = this.levelConfig.height * TILE_SIZE + 16;
+    if (!this.player.isDead && this.player.y > pitY) {
+      this.player.isDead = true;
+      AudioSystem.getInstance().playDamage();
+    }
+    if (this.player2 && !this.player2.isDead && this.player2.y > pitY) {
+      this.player2.isDead = true;
     }
 
     // Player 1

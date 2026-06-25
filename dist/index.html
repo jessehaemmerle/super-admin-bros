@@ -19,12 +19,16 @@
       overflow: hidden;
     }
     canvas {
-      image-rendering: pixelated;
+      /* Keep pixel art crisp when upscaled. `pixelated` is listed last so
+         Chromium uses it (last valid declaration wins). */
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
       image-rendering: crisp-edges;
+      image-rendering: pixelated;
       display: block;
     }
   </style>
-  <script type="module" crossorigin src="/assets/index-BYltYKGk.js"></script>
+  <script type="module" crossorigin src="/assets/index-fKtJ4fQE.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/phaser-0RJB29YE.js">
 </head>
 <body>

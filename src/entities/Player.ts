@@ -440,9 +440,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.fireTimer = Math.max(0, this.fireTimer - delta);
     }
 
-    // VPN teleport check (pressing down on VPN tile)
+    // VPN teleport check (pressing down on VPN tile) — emit a per-player event
+    // so player 2's down-press doesn't trigger player 1's VPN.
     if (downKey) {
-      this.scene.events.emit('player_down', this.x, this.y);
+      this.scene.events.emit(this.playerId === 2 ? 'player2_down' : 'player_down', this.x, this.y);
     }
 
     // Update player state
