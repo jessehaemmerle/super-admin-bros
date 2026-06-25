@@ -5,6 +5,8 @@ import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
 import { HudScene } from './scenes/HudScene';
 import { GameOverScene } from './scenes/GameOverScene';
+import { LevelTransitionScene } from './scenes/LevelTransitionScene';
+import { ShopScene } from './scenes/ShopScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -27,7 +29,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false
     }
   },
-  scene: [BootScene, MenuScene, GameScene, HudScene, GameOverScene]
+  scene: [BootScene, MenuScene, LevelTransitionScene, ShopScene, GameScene, HudScene, GameOverScene]
 };
 
 new Phaser.Game(config);

@@ -5,9 +5,27 @@ import { AudioSystem } from '../utils/AudioSystem';
 export type PlayerState = 'idle' | 'running' | 'jumping' | 'falling' | 'hurt' | 'dead';
 export type PowerUpState = 'small' | 'big' | 'sudo';
 
+export interface PlayerConfig {
+  playerId: 1 | 2;
+  tint?: number;
+}
+
+// Virtual touch/gamepad input — set from HudScene touch buttons
+export const TouchInput = {
+  left: false,
+  right: false,
+  jump: false,
+  fire: false,
+  p2left: false,
+  p2right: false,
+  p2jump: false,
+  p2fire: false
+};
+
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private playerState: PlayerState = 'idle';
   private powerState: PowerUpState = 'small';
+  readonly playerId: 1 | 2;
 
   // Input
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -15,6 +33,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private shiftKey!: Phaser.Input.Keyboard.Key;
   private fireKey!: Phaser.Input.Keyboard.Key;
   private xKey!: Phaser.Input.Keyboard.Key;
+  // Player 2 keys (WASD already used by P1 alt keys, so P2 uses IJKL + Z)
+  private p2keys!: { up: Phaser.Input.Keyboard.Key; left: Phaser.Input.Keyboard.Key; right: Phaser.Input.Keyboard.Key; down: Phaser.Input.Keyboard.Key; fire: Phaser.Input.Keyboard.Key };
 
   // Physics state
   private lastGrounded = 0;
@@ -46,27 +66,40 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public isDead = false;
   public isHurt = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, config: PlayerConfig = { playerId: 1 }) {
     super(scene, x, y, 'hank_small', 0);
+    this.playerId = config.playerId;
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setDepth(10);
+    if (config.tint) this.setTint(config.tint);
     this.checkpointX = x;
     this.checkpointY = y;
   }
 
   setupInput(): void {
     if (!this.scene.input.keyboard) return;
-    this.cursors = this.scene.input.keyboard.createCursorKeys();
-    this.wasd = {
-      up: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      left: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      right: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-      down: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S)
-    };
-    this.shiftKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
-    this.fireKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
-    this.xKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+    if (this.playerId === 1) {
+      this.cursors = this.scene.input.keyboard.createCursorKeys();
+      this.wasd = {
+        up: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+        left: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+        right: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+        down: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S)
+      };
+      this.shiftKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+      this.fireKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
+      this.xKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+    } else {
+      // Player 2: IJKL + Z
+      this.p2keys = {
+        up:    this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I),
+        left:  this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J),
+        right: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L),
+        down:  this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K),
+        fire:  this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z)
+      };
+    }
   }
 
   setProjectilesGroup(group: Phaser.Physics.Arcade.Group): void {
@@ -251,10 +284,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   update(delta: number): void {
     if (!this.cursors || this.isDead) {
       if (this.isDead) {
-        const body = this.body as Phaser.Physics.Arcade.Body;
-        if (body && body.velocity.y > 0 && this.y > 400) {
-          // fallen off screen
-        }
         this.updateAnimation();
       }
       return;
@@ -310,19 +339,35 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    // Input with inversion
-    const leftKey = this.cursors.left.isDown || this.wasd.left.isDown;
-    const rightKey = this.cursors.right.isDown || this.wasd.right.isDown;
-    const jumpKey = this.cursors.up.isDown || this.wasd.up.isDown || this.cursors.space.isDown;
-    const downKey = this.cursors.down.isDown || this.wasd.down.isDown;
-    const sprintKey = this.shiftKey?.isDown ?? false;
-    const fireKeyDown = (this.fireKey?.isDown || this.xKey?.isDown) ?? false;
+    // Input — Player 1 (cursors + WASD + touch) or Player 2 (IJKL + touch)
+    let leftKey: boolean, rightKey: boolean, jumpKey: boolean, downKey: boolean;
+    let sprintKey: boolean, fireKeyDown: boolean;
+
+    if (this.playerId === 1) {
+      const touch = TouchInput;
+      leftKey     = this.cursors.left.isDown  || this.wasd.left.isDown   || touch.left;
+      rightKey    = this.cursors.right.isDown || this.wasd.right.isDown  || touch.right;
+      jumpKey     = this.cursors.up.isDown    || this.wasd.up.isDown     || this.cursors.space.isDown || touch.jump;
+      downKey     = this.cursors.down.isDown  || this.wasd.down.isDown;
+      sprintKey   = this.shiftKey?.isDown ?? false;
+      fireKeyDown = (this.fireKey?.isDown || this.xKey?.isDown || touch.fire) ?? false;
+    } else {
+      const touch = TouchInput;
+      leftKey     = (this.p2keys?.left.isDown  ?? false) || touch.p2left;
+      rightKey    = (this.p2keys?.right.isDown ?? false) || touch.p2right;
+      jumpKey     = (this.p2keys?.up.isDown    ?? false) || touch.p2jump;
+      downKey     = (this.p2keys?.down.isDown  ?? false);
+      sprintKey   = false;
+      fireKeyDown = (this.p2keys?.fire.isDown  ?? false) || touch.p2fire;
+    }
 
     const moveLeft = this.controlsInverted ? rightKey : leftKey;
     const moveRight = this.controlsInverted ? leftKey : rightKey;
 
     // Horizontal movement
-    const maxSpeed = (this.energyDrinkActive || sprintKey) ? PHYSICS.SPRINT_SPEED : PHYSICS.RUN_SPEED;
+    const hasSpeedUpgrade = (this as unknown as { _upgSpeed?: boolean })._upgSpeed === true;
+    const baseSpeed = hasSpeedUpgrade ? PHYSICS.RUN_SPEED * 1.25 : PHYSICS.RUN_SPEED;
+    const maxSpeed = (this.energyDrinkActive || sprintKey) ? PHYSICS.SPRINT_SPEED : baseSpeed;
     const accel = onGround ? PHYSICS.ACCEL_GROUND : PHYSICS.ACCEL_GROUND * PHYSICS.AIR_CONTROL;
     const friction = onGround ? PHYSICS.FRICTION_GROUND : PHYSICS.FRICTION_GROUND * PHYSICS.AIR_CONTROL;
 
@@ -348,9 +393,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Jump buffer
-    const jumpJustPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
-      Phaser.Input.Keyboard.JustDown(this.wasd.up) ||
-      Phaser.Input.Keyboard.JustDown(this.cursors.space);
+    const jumpJustPressed = this.playerId === 1
+      ? (Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
+         Phaser.Input.Keyboard.JustDown(this.wasd.up) ||
+         Phaser.Input.Keyboard.JustDown(this.cursors.space))
+      : (this.p2keys ? Phaser.Input.Keyboard.JustDown(this.p2keys.up) : false);
 
     if (jumpJustPressed) {
       this.jumpBufferTimer = PHYSICS.JUMP_BUFFER;
@@ -454,5 +501,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   isInvulnerable(): boolean {
     return this.isInvul;
+  }
+
+  applyUpgradeSpeed(): void {
+    // Permanent speed boost via fireCooldown and sprint baseline
+    // We store it in a flag and it's read in update via PHYSICS constants override
+    (this as unknown as { _upgSpeed: boolean })._upgSpeed = true;
+  }
+
+  applyUpgradeFire(): void {
+    this.fireCooldown = 150;
+  }
+
+  applyStartShield(): void {
+    this.isInvul = true;
+    this.invulTimer = 3000;
   }
 }

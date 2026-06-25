@@ -131,6 +131,54 @@ export class AudioSystem {
     });
   }
 
+  playCombo(multiplier: number): void {
+    const ctx = this.getContext();
+    const t = ctx.currentTime;
+    const baseFreq = 440 + multiplier * 80;
+    this.createOscillator('square', baseFreq, t, 0.06, 0.5, baseFreq * 1.5);
+    this.createOscillator('sine', baseFreq * 2, t + 0.04, 0.05, 0.3);
+  }
+
+  playBossHit(): void {
+    const ctx = this.getContext();
+    const t = ctx.currentTime;
+    this.createOscillator('sawtooth', 200, t, 0.08, 0.5, 100);
+    this.createOscillator('square', 400, t, 0.06, 0.4, 200);
+  }
+
+  playBossShoot(): void {
+    const ctx = this.getContext();
+    const t = ctx.currentTime;
+    this.createOscillator('sawtooth', 600, t, 0.05, 0.3, 300);
+  }
+
+  playBossDie(): void {
+    const ctx = this.getContext();
+    const t = ctx.currentTime;
+    const notes = [880, 660, 440, 330, 220, 110];
+    notes.forEach((freq, i) => {
+      this.createOscillator('square', freq, t + i * 0.1, 0.15, 0.5);
+      this.createOscillator('sawtooth', freq * 0.5, t + i * 0.1, 0.12, 0.3);
+    });
+  }
+
+  playShopBuy(): void {
+    const ctx = this.getContext();
+    const t = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99];
+    notes.forEach((freq, i) => {
+      this.createOscillator('sine', freq, t + i * 0.07, 0.1, 0.4);
+    });
+  }
+
+  playLevelTransition(): void {
+    const ctx = this.getContext();
+    const t = ctx.currentTime;
+    this.createOscillator('square', 261.63, t, 0.1, 0.4);
+    this.createOscillator('square', 392, t + 0.1, 0.1, 0.4);
+    this.createOscillator('square', 523.25, t + 0.2, 0.2, 0.5);
+  }
+
   playVpnEnter(): void {
     const ctx = this.getContext();
     const t = ctx.currentTime;
@@ -280,6 +328,10 @@ export class AudioSystem {
         this.scheduleMusic();
       }
     }, (loopDuration - 0.5) * 1000);
+  }
+
+  isMusicPlaying(): boolean {
+    return this.musicPlaying;
   }
 
   stopMusic(): void {

@@ -35,3 +35,17 @@ export const COLORS = {
   CHECKPOINT: 0x22cc44,
   GOAL: 0xdddddd
 } as const;
+
+export const COMBO = {
+  TIMEOUT_MS: 2500,
+  MAX_MULTIPLIER: 8
+} as const;
+
+export const SHOP_PRICES = {
+  EXTRA_LIFE: 300,
+  EXTRA_SPEED: 400,
+  FASTER_FIRE: 500,
+  START_SHIELD: 350
+} as const;
+
+export const TOTAL_LEVELS = 3;

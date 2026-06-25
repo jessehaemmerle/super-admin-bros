@@ -20,6 +20,12 @@ export class BootScene extends Phaser.Scene {
     this.generateStars();
     this.generateExplosion();
     this.generateBackground();
+    this.generateBuggyCode();
+    this.generateCeo();
+    this.generateBackgroundServerroom();
+    this.generateBackgroundDatacenter();
+    this.generateBackgroundMid();
+    this.generateBackgroundNear();
 
     this.scene.start('MenuScene');
   }
@@ -1188,6 +1194,323 @@ export class BootScene extends Phaser.Scene {
     }
 
     g.generateTexture('background', 480, 270);
+    g.destroy();
+  }
+
+  private generateBuggyCode(): void {
+    // 2 frames × 16×16 = 32×16 — red glitchy butterfly
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+
+    const drawBuggy = (ox: number, wingUp: boolean) => {
+      // Body
+      g.fillStyle(0xcc0000);
+      g.fillRect(ox + 6, 4, 4, 8);
+      // Head
+      g.fillStyle(0xff2222);
+      g.fillRect(ox + 5, 2, 6, 4);
+      // Evil eyes
+      g.fillStyle(0xffff00);
+      g.fillRect(ox + 5, 3, 2, 2);
+      g.fillRect(ox + 9, 3, 2, 2);
+      // Wings
+      g.fillStyle(0xff4444);
+      if (wingUp) {
+        g.fillRect(ox + 0, 2, 6, 4);
+        g.fillRect(ox + 10, 2, 6, 4);
+        g.fillStyle(0xff8888);
+        g.fillRect(ox + 1, 3, 3, 2);
+        g.fillRect(ox + 12, 3, 3, 2);
+      } else {
+        g.fillRect(ox + 0, 6, 6, 5);
+        g.fillRect(ox + 10, 6, 6, 5);
+        g.fillStyle(0xff8888);
+        g.fillRect(ox + 1, 7, 3, 3);
+        g.fillRect(ox + 12, 7, 3, 3);
+      }
+      // Glitch artifacts
+      g.fillStyle(0xffff00);
+      g.fillRect(ox + 2, 1, 1, 1);
+      g.fillRect(ox + 13, 12, 1, 1);
+    };
+
+    drawBuggy(0, true);
+    drawBuggy(16, false);
+
+    g.generateTexture('buggy_code', 32, 16);
+    g.destroy();
+
+    this.anims.create({
+      key: 'buggy_fly',
+      frames: this.anims.generateFrameNumbers('buggy_code', { start: 0, end: 1 }),
+      frameRate: 10,
+      repeat: -1
+    });
+  }
+
+  private generateCeo(): void {
+    // 2 frames × 24×32 = 48×32
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+
+    const drawCeo = (ox: number, armUp: boolean) => {
+      // Suit (dark, expensive)
+      g.fillStyle(0x1a1a2e);
+      g.fillRect(ox + 2, 12, 20, 16);
+      // Tie (gold)
+      g.fillStyle(0xffcc00);
+      g.fillRect(ox + 10, 12, 4, 10);
+      g.fillRect(ox + 9, 13, 6, 2);
+      // Shirt
+      g.fillStyle(0xffffff);
+      g.fillRect(ox + 8, 12, 8, 4);
+      // Arms
+      g.fillStyle(0x1a1a2e);
+      if (armUp) {
+        g.fillRect(ox + 0, 11, 3, 8);
+        g.fillRect(ox + 21, 10, 3, 9);
+      } else {
+        g.fillRect(ox + 0, 13, 3, 8);
+        g.fillRect(ox + 21, 13, 3, 8);
+      }
+      // Hands
+      g.fillStyle(0xffcc99);
+      g.fillRect(ox + 0, armUp ? 18 : 20, 4, 3);
+      g.fillRect(ox + 20, armUp ? 17 : 20, 4, 3);
+      // Pants
+      g.fillStyle(0x0a0a1a);
+      g.fillRect(ox + 2, 26, 20, 4);
+      g.fillRect(ox + 2, 28, 8, 4);
+      g.fillRect(ox + 14, 28, 8, 4);
+      // Shoes
+      g.fillStyle(0x111111);
+      g.fillRect(ox + 1, 30, 9, 2);
+      g.fillRect(ox + 14, 30, 9, 2);
+      // Head
+      g.fillStyle(0xffcc99);
+      g.fillRect(ox + 5, 2, 14, 12);
+      // Hair (grey, distinguished)
+      g.fillStyle(0x888888);
+      g.fillRect(ox + 5, 2, 14, 3);
+      g.fillRect(ox + 5, 2, 2, 5);
+      g.fillRect(ox + 17, 2, 2, 5);
+      // Eyes (cold)
+      g.fillStyle(0x0000cc);
+      g.fillRect(ox + 7, 7, 3, 2);
+      g.fillRect(ox + 14, 7, 3, 2);
+      // Power-smile
+      g.fillStyle(0xcc4444);
+      g.fillRect(ox + 8, 11, 8, 1);
+      // Smartphone / meeting request weapon
+      g.fillStyle(0x333333);
+      g.fillRect(ox + (armUp ? 20 : 20), armUp ? 13 : 17, 3, 5);
+      g.fillStyle(0x4488ff);
+      g.fillRect(ox + 21, armUp ? 14 : 18, 1, 3);
+    };
+
+    drawCeo(0, false);
+    drawCeo(24, true);
+
+    g.generateTexture('ceo', 48, 32);
+    g.destroy();
+
+    this.anims.create({
+      key: 'ceo_idle',
+      frames: this.anims.generateFrameNumbers('ceo', { start: 0, end: 0 }),
+      frameRate: 1,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'ceo_walk',
+      frames: this.anims.generateFrameNumbers('ceo', { start: 0, end: 1 }),
+      frameRate: 4,
+      repeat: -1
+    });
+
+    // Meeting request projectile 12×8
+    const gp = this.make.graphics({ x: 0, y: 0 }, false);
+    gp.clear();
+    gp.fillStyle(0xffffff);
+    gp.fillRect(0, 1, 12, 6);
+    gp.fillStyle(0xcccccc);
+    gp.fillRect(0, 1, 12, 1);
+    gp.fillRect(0, 6, 12, 1);
+    gp.fillStyle(0x0044cc);
+    gp.fillRect(1, 2, 10, 1);
+    gp.fillRect(1, 4, 8, 1);
+    // "MTG" text suggestion
+    gp.fillStyle(0xcc2222);
+    gp.fillRect(2, 3, 2, 1);
+    gp.fillRect(5, 3, 2, 1);
+    gp.generateTexture('meeting_proj', 12, 8);
+    gp.destroy();
+  }
+
+  private generateBackgroundServerroom(): void {
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+
+    // Dark blue-grey server room
+    g.fillStyle(0x0d1117);
+    g.fillRect(0, 0, 480, 270);
+
+    // Ceiling — cable trays
+    g.fillStyle(0x1a2030);
+    g.fillRect(0, 0, 480, 20);
+    g.fillStyle(0x2a3040);
+    for (let x = 0; x < 480; x += 48) {
+      g.fillRect(x, 5, 32, 8);
+    }
+    // Cable colors
+    const cableColors = [0xff4444, 0x44ff44, 0x4444ff, 0xffff44, 0xff44ff];
+    for (let x = 0; x < 480; x += 16) {
+      const c = cableColors[Math.floor(x / 16) % cableColors.length];
+      g.fillStyle(c);
+      g.fillRect(x, 8, 2, 12);
+    }
+
+    // Floor (raised floor tiles)
+    g.fillStyle(0x1e2530);
+    g.fillRect(0, 220, 480, 50);
+    g.fillStyle(0x252d3a);
+    for (let x = 0; x < 480; x += 32) {
+      g.fillRect(x, 220, 31, 50);
+    }
+    g.fillStyle(0x1a2030);
+    for (let x = 0; x < 480; x += 32) {
+      g.fillRect(x, 220, 32, 1);
+    }
+
+    // Server racks in background
+    g.fillStyle(0x1e2a3a);
+    for (let x = 30; x < 480; x += 90) {
+      g.fillRect(x, 20, 50, 200);
+      g.fillStyle(0x0a1220);
+      g.fillRect(x + 2, 22, 46, 196);
+      // Blinking lights
+      for (let y = 30; y < 210; y += 10) {
+        g.fillStyle((x + y) % 30 === 0 ? 0xff2222 : (x + y) % 20 === 0 ? 0xffaa00 : 0x22ff44);
+        g.fillRect(x + 4, y, 2, 3);
+        g.fillRect(x + 8, y, 2, 3);
+      }
+      g.fillStyle(0x1e2a3a);
+    }
+
+    // Emergency strip lighting (floor level)
+    g.fillStyle(0x004400);
+    for (let x = 0; x < 480; x += 20) {
+      g.fillRect(x, 218, 10, 2);
+    }
+
+    g.generateTexture('background_serverroom', 480, 270);
+    g.destroy();
+  }
+
+  private generateBackgroundDatacenter(): void {
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+
+    // Dark red emergency lighting
+    g.fillStyle(0x1a0000);
+    g.fillRect(0, 0, 480, 270);
+
+    // Ceiling
+    g.fillStyle(0x2a0000);
+    g.fillRect(0, 0, 480, 18);
+    // Emergency light strips
+    g.fillStyle(0xcc0000);
+    for (let x = 0; x < 480; x += 60) {
+      g.fillRect(x, 2, 30, 4);
+    }
+
+    // Floor
+    g.fillStyle(0x200000);
+    g.fillRect(0, 225, 480, 45);
+    // Floor grid
+    g.fillStyle(0x2a0000);
+    for (let x = 0; x < 480; x += 24) {
+      g.fillRect(x, 225, 1, 45);
+    }
+    for (let y = 225; y < 270; y += 24) {
+      g.fillRect(0, y, 480, 1);
+    }
+
+    // Server racks — all with red emergency light glow
+    for (let x = 20; x < 480; x += 70) {
+      g.fillStyle(0x300000);
+      g.fillRect(x, 18, 45, 207);
+      g.fillStyle(0x1a0000);
+      g.fillRect(x + 2, 20, 41, 203);
+      // Red blinking status lights
+      for (let y = 28; y < 215; y += 8) {
+        const on = (x + y) % 16 < 8;
+        g.fillStyle(on ? 0xff0000 : 0x440000);
+        g.fillRect(x + 3, y, 3, 2);
+        g.fillStyle(on ? 0xcc4400 : 0x330000);
+        g.fillRect(x + 8, y, 3, 2);
+      }
+    }
+
+    // Warning signs
+    g.fillStyle(0xcc8800);
+    for (let x = 55; x < 480; x += 120) {
+      // Triangle warning
+      g.fillTriangle(x, 200, x + 16, 200, x + 8, 185);
+      g.fillStyle(0x1a0000);
+      g.fillRect(x + 7, 190, 2, 6);
+      g.fillRect(x + 7, 198, 2, 2);
+      g.fillStyle(0xcc8800);
+    }
+
+    g.generateTexture('background_datacenter', 480, 270);
+    g.destroy();
+  }
+
+  private generateBackgroundMid(): void {
+    // Mid parallax layer — window frames / partitions (480×270, transparent bg)
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+
+    // Window frames every 120px
+    for (let x = 10; x < 480; x += 120) {
+      g.fillStyle(0x8899bb, 0.6);
+      g.fillRect(x, 30, 70, 90);
+      g.fillStyle(0x99aacc, 0.5);
+      g.fillRect(x + 2, 32, 30, 40);
+      g.fillRect(x + 36, 32, 30, 40);
+      g.fillRect(x + 2, 76, 30, 40);
+      g.fillRect(x + 36, 76, 30, 40);
+      // Light reflection
+      g.fillStyle(0xffffff, 0.2);
+      g.fillRect(x + 4, 34, 8, 6);
+    }
+
+    g.generateTexture('background_mid', 480, 270);
+    g.destroy();
+  }
+
+  private generateBackgroundNear(): void {
+    // Near parallax layer — desk silhouettes (480×270)
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+
+    // Desk silhouettes at bottom
+    for (let x = 0; x < 480; x += 110) {
+      // Desk surface
+      g.fillStyle(0x3a2a10, 0.5);
+      g.fillRect(x + 5, 200, 90, 10);
+      // Monitor
+      g.fillStyle(0x222222, 0.5);
+      g.fillRect(x + 10, 175, 40, 26);
+      g.fillStyle(0x111111, 0.4);
+      g.fillRect(x + 12, 177, 36, 22);
+      // Chair
+      g.fillStyle(0x333333, 0.4);
+      g.fillRect(x + 60, 195, 24, 16);
+      g.fillRect(x + 66, 180, 12, 16);
+    }
+
+    g.generateTexture('background_near', 480, 270);
     g.destroy();
   }
 }

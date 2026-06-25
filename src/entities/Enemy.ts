@@ -1,9 +1,8 @@
 import Phaser from 'phaser';
 
 export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
-  protected alive = true;
   protected speed = 50;
-  protected isDead = false;
+  public isDead = false;
   protected scoreValue = 100;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
@@ -20,13 +19,12 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   isAlive(): boolean {
-    return this.alive && !this.isDead;
+    return !this.isDead;
   }
 
   stomp(): void {
     if (this.isDead) return;
     this.isDead = true;
-    this.alive = false;
     this.setVelocity(0, 0);
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (body) {
@@ -47,7 +45,6 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   die(): void {
     if (this.isDead) return;
     this.isDead = true;
-    this.alive = false;
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (body) {
       body.enable = false;
