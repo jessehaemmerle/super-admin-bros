@@ -24,10 +24,28 @@ export class BootScene extends Phaser.Scene {
     this.generateCeo();
     this.generateBackgroundServerroom();
     this.generateBackgroundDatacenter();
-    this.generateBackgroundMid();
-    this.generateBackgroundNear();
+    this.generateMidNearLayers();
 
     this.scene.start('MenuScene');
+  }
+
+  /**
+   * Registers numbered sub-frames on a flat texture produced by generateTexture(),
+   * so it can be used as a spritesheet by generateFrameNumbers() / setFrame().
+   * Phaser's Graphics.generateTexture() only creates a single __BASE frame, so any
+   * animation or setFrame(n) call would otherwise reference a non-existent frame.
+   */
+  private sliceSheet(key: string, frameW: number, frameH: number): void {
+    const tex = this.textures.get(key);
+    const src = tex.getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    const cols = Math.max(1, Math.floor(src.width / frameW));
+    const rows = Math.max(1, Math.floor(src.height / frameH));
+    let idx = 0;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        tex.add(idx++, 0, col * frameW, row * frameH, frameW, frameH);
+      }
+    }
   }
 
   private generateHankSmall(): void {
@@ -253,6 +271,7 @@ export class BootScene extends Phaser.Scene {
     }
     g.generateTexture('hank_small', 128, 24);
     g.destroy();
+    this.sliceSheet('hank_small', 16, 24);
 
     // Create animations
     this.anims.create({
@@ -380,6 +399,7 @@ export class BootScene extends Phaser.Scene {
 
     g.generateTexture('hank_big', 128, 32);
     g.destroy();
+    this.sliceSheet('hank_big', 16, 32);
 
     this.anims.create({
       key: 'hank_big_idle',
@@ -480,6 +500,7 @@ export class BootScene extends Phaser.Scene {
 
     g.generateTexture('hank_sudo', 128, 32);
     g.destroy();
+    this.sliceSheet('hank_sudo', 16, 32);
 
     this.anims.create({
       key: 'hank_sudo_idle',
@@ -518,152 +539,94 @@ export class BootScene extends Phaser.Scene {
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     g.clear();
 
-    // 0: transparent (empty)
-    // nothing
+    // 0: transparent (empty) — nothing.
 
-    // 1: ground (dark gray with texture)
-    g.fillStyle(0x4a4a4a);
-    g.fillRect(16, 0, 16, 16);
-    g.fillStyle(0x3a3a3a);
-    g.fillRect(16, 0, 16, 2);
-    g.fillStyle(0x5a5a5a);
-    g.fillRect(17, 3, 2, 2);
-    g.fillRect(22, 6, 2, 2);
-    g.fillRect(27, 2, 2, 2);
-    g.fillStyle(0x2a2a2a);
-    g.fillRect(16, 14, 16, 2);
+    // 1: ground — slate raised-floor panel (neutral across all themes).
+    g.fillStyle(0x46505e); g.fillRect(16, 0, 16, 16);          // body
+    g.fillStyle(0x5b6675); g.fillRect(16, 0, 16, 3);           // top bevel
+    g.fillStyle(0x6d7a8b); g.fillRect(16, 0, 16, 1);           // top highlight
+    g.fillStyle(0x363e49); g.fillRect(16, 13, 16, 3);          // bottom shade
+    g.fillStyle(0x2b323b); g.fillRect(16, 15, 16, 1);
+    // panel studs (interior so they tile seamlessly)
+    g.fillStyle(0x5b6675); g.fillRect(19, 6, 2, 2); g.fillRect(27, 6, 2, 2);
+    g.fillStyle(0x363e49); g.fillRect(19, 8, 2, 1); g.fillRect(27, 8, 2, 1);
 
-    // 2: brick (blue-gray)
-    g.fillStyle(0x6b7fa3);
-    g.fillRect(32, 0, 16, 16);
-    g.fillStyle(0x5a6e92);
-    // brick pattern
-    g.fillRect(32, 0, 16, 1);
-    g.fillRect(32, 7, 16, 1);
-    g.fillRect(32, 8, 16, 1);
-    g.fillRect(32, 15, 16, 1);
-    g.fillRect(40, 1, 1, 6);
-    g.fillRect(36, 9, 1, 6);
-    g.fillStyle(0x7a8eb2);
-    g.fillRect(33, 2, 6, 4);
-    g.fillRect(41, 2, 6, 4);
-    g.fillRect(33, 10, 3, 4);
-    g.fillRect(37, 10, 4, 4);
-    g.fillRect(42, 10, 5, 4);
+    // 2: brick — masonry with mortar lines + offset courses.
+    g.fillStyle(0x9c5a3c); g.fillRect(32, 0, 16, 16);          // brick body
+    g.fillStyle(0xb56e4a); g.fillRect(32, 0, 16, 1);           // top highlight
+    g.fillStyle(0x6e3c26); g.fillRect(32, 15, 16, 1);          // bottom shade
+    g.fillStyle(0x5a3020);                                     // mortar
+    g.fillRect(32, 7, 16, 2);                                  // horizontal seam
+    g.fillRect(40, 0, 1, 7); g.fillRect(36, 9, 1, 7);          // vertical seams (offset)
+    g.fillStyle(0xae6646);                                     // brick face highlights
+    g.fillRect(33, 2, 6, 4); g.fillRect(42, 2, 5, 4);
+    g.fillRect(33, 10, 2, 4); g.fillRect(38, 10, 7, 4);
 
-    // 3: question block (yellow with ?)
-    g.fillStyle(0xf5c842);
-    g.fillRect(48, 0, 16, 16);
-    g.fillStyle(0xc9a030);
-    g.fillRect(48, 0, 16, 1);
-    g.fillRect(48, 15, 16, 1);
-    g.fillRect(48, 0, 1, 16);
-    g.fillRect(63, 0, 1, 16);
+    // 3: question block — bright beveled gold with a crisp "?".
+    g.fillStyle(0xf2b417); g.fillRect(48, 0, 16, 16);          // gold body
+    g.fillStyle(0xffd84a); g.fillRect(48, 0, 16, 2); g.fillRect(48, 0, 2, 16); // light TL
+    g.fillStyle(0xb87d0e); g.fillRect(48, 14, 16, 2); g.fillRect(62, 0, 2, 16); // dark BR
+    g.fillStyle(0x7a5208);                                     // corner rivets
+    g.fillRect(49, 1, 1, 1); g.fillRect(62, 1, 1, 1); g.fillRect(49, 14, 1, 1); g.fillRect(62, 14, 1, 1);
+    // "?" — dark drop shadow then white
+    g.fillStyle(0x7a5208);
+    g.fillRect(54, 4, 6, 2); g.fillRect(58, 5, 2, 3); g.fillRect(55, 8, 3, 2); g.fillRect(55, 11, 3, 2);
     g.fillStyle(0xffffff);
-    // ? shape
-    g.fillRect(54, 3, 4, 1);
-    g.fillRect(57, 4, 1, 3);
-    g.fillRect(54, 7, 3, 1);
-    g.fillRect(54, 9, 3, 2);
-    g.fillStyle(0xf5c842);
-    g.fillRect(55, 4, 2, 3);
+    g.fillRect(53, 3, 6, 2); g.fillRect(57, 4, 2, 3); g.fillRect(54, 7, 3, 2); g.fillRect(54, 10, 3, 2);
 
-    // 4: used block (gray)
-    g.fillStyle(0x888888);
-    g.fillRect(64, 0, 16, 16);
-    g.fillStyle(0x666666);
-    g.fillRect(64, 0, 16, 1);
-    g.fillRect(64, 15, 16, 1);
-    g.fillRect(64, 0, 1, 16);
-    g.fillRect(79, 0, 1, 16);
+    // 4: used block — spent bronze block with center rivet.
+    g.fillStyle(0x8a7034); g.fillRect(64, 0, 16, 16);
+    g.fillStyle(0xa3884a); g.fillRect(64, 0, 16, 2); g.fillRect(64, 0, 2, 16);
+    g.fillStyle(0x5e4c20); g.fillRect(64, 14, 16, 2); g.fillRect(78, 0, 2, 16);
+    g.fillStyle(0x5e4c20); g.fillRect(71, 7, 2, 2);
 
-    // 5: platform (brown wooden look)
-    g.fillStyle(0x8b6914);
-    g.fillRect(80, 0, 16, 6);
-    g.fillStyle(0xaa8833);
-    g.fillRect(80, 0, 16, 3);
-    g.fillStyle(0x6a5010);
-    g.fillRect(80, 3, 16, 1);
-    g.fillStyle(0x9a7822);
-    g.fillRect(81, 1, 3, 1);
-    g.fillRect(86, 1, 4, 1);
-    g.fillRect(91, 1, 3, 1);
+    // 5: platform — one-way metal plank with a bright walk-on edge (top 6px).
+    g.fillStyle(0x7a8290); g.fillRect(80, 0, 16, 6);           // plank body
+    g.fillStyle(0xbcc6d4); g.fillRect(80, 0, 16, 2);           // bright top surface
+    g.fillStyle(0x4c545f); g.fillRect(80, 5, 16, 1);           // underside shadow
+    g.fillStyle(0x99a3b1);                                     // rivets
+    g.fillRect(82, 3, 2, 1); g.fillRect(88, 3, 2, 1); g.fillRect(93, 3, 2, 1);
 
-    // 6: spike/cable (black hazard)
-    g.fillStyle(0x222222);
-    g.fillRect(96, 8, 16, 8);
-    g.fillStyle(0xdd2222);
-    // spikes
-    for (let i = 0; i < 4; i++) {
-      g.fillTriangle(
-        96 + i * 4, 8,
-        96 + i * 4 + 2, 0,
-        96 + i * 4 + 4, 8
-      );
+    // 6: hazard — red spikes on a dark base with warning stripe.
+    g.fillStyle(0x1b1b1f); g.fillRect(96, 7, 16, 9);          // base
+    g.fillStyle(0xf0c020); g.fillRect(96, 7, 16, 2);          // warning stripe
+    g.fillStyle(0x1b1b1f);
+    for (let i = 0; i < 4; i++) g.fillRect(97 + i * 4, 7, 2, 2);
+    for (let i = 0; i < 4; i++) {                              // spikes
+      g.fillStyle(0xe23a3a);
+      g.fillTriangle(96 + i * 4, 7, 96 + i * 4 + 2, 0, 96 + i * 4 + 4, 7);
+      g.fillStyle(0xff7a6a);                                  // spike highlight
+      g.fillTriangle(96 + i * 4 + 1, 6, 96 + i * 4 + 2, 1, 96 + i * 4 + 2, 6);
     }
-    g.fillStyle(0xaa1111);
-    g.fillRect(96, 6, 16, 2);
 
-    // 7: VPN tunnel (purple)
-    g.fillStyle(0x8b44cc);
-    g.fillRect(112, 0, 16, 16);
-    g.fillStyle(0x6622aa);
-    g.fillRect(113, 1, 14, 14);
-    g.fillStyle(0xaa66ee);
-    g.fillRect(114, 2, 3, 3);
-    g.fillRect(121, 2, 3, 3);
-    g.fillStyle(0xffffff);
-    g.fillRect(116, 6, 4, 4);
-    g.fillStyle(0x8b44cc);
-    g.fillRect(117, 7, 2, 2);
-    // VPN arrow
-    g.fillStyle(0xffffff);
-    g.fillRect(117, 11, 2, 3);
-    g.fillRect(115, 12, 6, 1);
+    // 7: VPN portal — glowing purple gateway with an up-arrow.
+    g.fillStyle(0x2a103f); g.fillRect(112, 0, 16, 16);
+    g.fillStyle(0x6a2ab0); g.fillRect(113, 1, 14, 14);
+    g.fillStyle(0x9a4ae0); g.fillRect(114, 2, 12, 12);
+    g.fillStyle(0xc98bff); g.fillRect(115, 3, 10, 4);          // top glow
+    g.fillStyle(0xffffff);                                     // up-arrow
+    g.fillRect(119, 5, 2, 7);
+    g.fillTriangle(116, 7, 120, 3, 124, 7);
 
-    // 8: checkpoint (green flag)
-    g.fillStyle(0x22cc44);
-    g.fillRect(128, 0, 16, 16);
-    g.fillStyle(0x119933);
-    g.fillRect(128, 14, 16, 2);
-    g.fillStyle(0xffffff);
-    // flag pole
-    g.fillRect(132, 2, 1, 12);
-    // flag
-    g.fillStyle(0xffcc00);
-    g.fillRect(133, 2, 5, 3);
-    g.fillRect(133, 5, 4, 2);
-    // git icon (G)
-    g.fillStyle(0xff6600);
-    g.fillRect(135, 9, 4, 4);
-    g.fillStyle(0x22cc44);
-    g.fillRect(136, 10, 2, 2);
-    g.fillRect(136, 11, 3, 1);
+    // 8: checkpoint — green commit flag on a pole.
+    g.fillStyle(0xbfc6cf); g.fillRect(135, 1, 2, 14);         // pole
+    g.fillStyle(0x8c929b); g.fillRect(133, 14, 6, 2);         // base
+    g.fillStyle(0x27c24a); g.fillTriangle(137, 2, 137, 9, 145, 5);  // flag
+    g.fillStyle(0x179033); g.fillTriangle(137, 6, 137, 9, 142, 7);  // flag shade
+    g.fillStyle(0xffffff); g.fillRect(139, 4, 2, 2);          // check mark dot
 
-    // 9: goal clock
-    g.fillStyle(0xdddddd);
-    g.fillRect(144, 0, 16, 16);
-    g.fillStyle(0xbbbbbb);
-    g.fillRect(145, 1, 14, 14);
-    g.fillStyle(0xffffff);
-    // clock face
-    g.fillRect(148, 3, 8, 10);
-    g.fillStyle(0x333333);
-    // clock border
-    g.fillRect(148, 3, 8, 1);
-    g.fillRect(148, 12, 8, 1);
-    g.fillRect(148, 3, 1, 10);
-    g.fillRect(155, 3, 1, 10);
-    // clock hands
-    g.fillStyle(0x111111);
-    g.fillRect(151, 5, 1, 4);
-    g.fillRect(151, 8, 3, 1);
-    // 17:00 marks
-    g.fillStyle(0xcc2222);
-    g.fillRect(154, 4, 1, 2);
+    // 9: goal — glowing green EXIT door (Feierabend!).
+    g.fillStyle(0x20262f); g.fillRect(144, 0, 16, 16);        // frame
+    g.fillStyle(0x1f9f3e); g.fillRect(146, 1, 12, 15);        // door
+    g.fillStyle(0x33c659); g.fillRect(146, 1, 12, 2);         // top light
+    g.fillStyle(0x14702a); g.fillRect(146, 13, 12, 3);        // bottom shade
+    g.fillStyle(0xeafff0); g.fillRect(154, 8, 2, 2);          // knob
+    g.fillStyle(0xffffff);                                     // exit arrow →
+    g.fillRect(148, 6, 4, 1); g.fillTriangle(151, 4, 151, 8, 154, 6);
 
     g.generateTexture('tileset', 160, 16);
     g.destroy();
+    this.sliceSheet('tileset', 16, 16);
   }
 
   private generateTicket(): void {
@@ -721,6 +684,7 @@ export class BootScene extends Phaser.Scene {
 
     g.generateTexture('ticket', 32, 16);
     g.destroy();
+    this.sliceSheet('ticket', 16, 16);
 
     this.anims.create({
       key: 'ticket_walk',
@@ -837,6 +801,7 @@ export class BootScene extends Phaser.Scene {
 
     g.generateTexture('phishing_mail', 32, 16);
     g.destroy();
+    this.sliceSheet('phishing_mail', 16, 16);
 
     this.anims.create({
       key: 'phishing_fly',
@@ -915,6 +880,7 @@ export class BootScene extends Phaser.Scene {
 
     g.generateTexture('clumsy_user', 32, 24);
     g.destroy();
+    this.sliceSheet('clumsy_user', 16, 24);
 
     this.anims.create({
       key: 'clumsy_walk',
@@ -1144,54 +1110,44 @@ export class BootScene extends Phaser.Scene {
   }
 
   private generateBackground(): void {
+    // Office FAR layer (480×270): distant back wall + bright sky windows.
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     g.clear();
 
-    // office background (480×270)
-    // sky/ceiling
-    g.fillStyle(0xf0f0e0);
-    g.fillRect(0, 0, 480, 270);
-    // ceiling tiles
-    g.fillStyle(0xe0e0d0);
-    for (let x = 0; x < 480; x += 32) {
-      g.fillRect(x, 0, 31, 16);
+    // Warm corporate wall with a soft vertical gradient (two bands).
+    g.fillStyle(0xe6e3d8); g.fillRect(0, 0, 480, 270);
+    g.fillStyle(0xf1efe6); g.fillRect(0, 0, 480, 130);
+
+    // Acoustic-tile ceiling with recessed fluorescent fixtures.
+    g.fillStyle(0xd4d1c4); g.fillRect(0, 0, 480, 24);
+    g.fillStyle(0xc5c2b4);
+    for (let x = 0; x <= 480; x += 40) g.fillRect(x, 0, 1, 24);
+    for (let x = 28; x < 480; x += 128) {
+      g.fillStyle(0xfffdf0); g.fillRect(x, 7, 60, 7);
+      g.fillStyle(0xffffff); g.fillRect(x + 2, 8, 56, 2);
     }
-    // fluorescent lights
-    g.fillStyle(0xffffee);
-    for (let x = 16; x < 480; x += 96) {
-      g.fillRect(x, 2, 48, 8);
-      g.fillStyle(0xccccaa);
-      g.fillRect(x, 2, 48, 1);
-      g.fillStyle(0xffffee);
-    }
-    // wall (back)
-    g.fillStyle(0xd8d8cc);
-    g.fillRect(0, 16, 480, 140);
-    // wall decoration - windows
-    for (let x = 20; x < 480; x += 120) {
-      g.fillStyle(0x88aacc);
-      g.fillRect(x, 25, 64, 48);
-      g.fillStyle(0xaaccee);
-      g.fillRect(x + 2, 27, 28, 20);
-      g.fillRect(x + 34, 27, 28, 20);
-      g.fillRect(x + 2, 51, 28, 20);
-      g.fillRect(x + 34, 51, 28, 20);
+
+    // Panoramic windows onto a clear blue sky — the bright "Mario" backdrop.
+    for (let wx = 26; wx < 480; wx += 156) {
+      g.fillStyle(0x97a3b6); g.fillRect(wx - 5, 40, 120, 98);          // outer frame
+      g.fillStyle(0x6fb7ec); g.fillRect(wx, 45, 110, 88);             // sky (lower)
+      g.fillStyle(0x9ad2f4); g.fillRect(wx, 45, 110, 42);             // sky (upper, lighter)
+      // distant skyline silhouettes
+      g.fillStyle(0x8fb8d8);
+      g.fillRect(wx + 12, 104, 16, 28); g.fillRect(wx + 34, 96, 12, 36);
+      g.fillRect(wx + 62, 110, 18, 22); g.fillRect(wx + 86, 100, 14, 32);
+      // clouds
       g.fillStyle(0xffffff);
-      g.fillRect(x + 3, 28, 8, 6);
-      g.fillRect(x + 35, 28, 8, 6);
+      g.fillRect(wx + 18, 60, 24, 6); g.fillRect(wx + 14, 64, 32, 5);
+      g.fillRect(wx + 66, 80, 22, 5); g.fillRect(wx + 62, 84, 30, 5);
+      // mullions
+      g.fillStyle(0x97a3b6);
+      g.fillRect(wx + 53, 45, 4, 88); g.fillRect(wx, 87, 110, 4);
     }
-    // floor area (carpet)
-    g.fillStyle(0x558866);
-    g.fillRect(0, 160, 480, 110);
-    // carpet pattern
-    g.fillStyle(0x447755);
-    for (let x = 0; x < 480; x += 16) {
-      for (let y = 160; y < 270; y += 16) {
-        if ((x + y) % 32 === 0) {
-          g.fillRect(x, y, 16, 16);
-        }
-      }
-    }
+
+    // Baseboard + faint floor (mostly hidden behind the ground tiles).
+    g.fillStyle(0xbab6a8); g.fillRect(0, 150, 480, 5);
+    g.fillStyle(0xd2cdbe); g.fillRect(0, 155, 480, 115);
 
     g.generateTexture('background', 480, 270);
     g.destroy();
@@ -1239,6 +1195,7 @@ export class BootScene extends Phaser.Scene {
 
     g.generateTexture('buggy_code', 32, 16);
     g.destroy();
+    this.sliceSheet('buggy_code', 16, 16);
 
     this.anims.create({
       key: 'buggy_fly',
@@ -1313,6 +1270,7 @@ export class BootScene extends Phaser.Scene {
 
     g.generateTexture('ceo', 48, 32);
     g.destroy();
+    this.sliceSheet('ceo', 24, 32);
 
     this.anims.create({
       key: 'ceo_idle',
@@ -1466,51 +1424,131 @@ export class BootScene extends Phaser.Scene {
     g.destroy();
   }
 
-  private generateBackgroundMid(): void {
-    // Mid parallax layer — window frames / partitions (480×270, transparent bg)
+  // ── Per-theme parallax layers ────────────────────────────────────────────
+  // Each theme gets its own MID (mid-distance structures) and NEAR (foreground
+  // silhouettes) layer so office furniture never bleeds into the server/data
+  // levels. GameScene applies the layer alpha (mid 0.7 / near 0.5), so shapes
+  // here are drawn solid for crisp parallax depth.
+
+  private generateMidNearLayers(): void {
+    this.makeOfficeMid();  this.makeOfficeNear();
+    this.makeServerMid();  this.makeServerNear();
+    this.makeDataMid();    this.makeDataNear();
+  }
+
+  private makeOfficeMid(): void {
+    // Cubicle partitions + a wall clock — mid distance.
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     g.clear();
-
-    // Window frames every 120px
-    for (let x = 10; x < 480; x += 120) {
-      g.fillStyle(0x8899bb, 0.6);
-      g.fillRect(x, 30, 70, 90);
-      g.fillStyle(0x99aacc, 0.5);
-      g.fillRect(x + 2, 32, 30, 40);
-      g.fillRect(x + 36, 32, 30, 40);
-      g.fillRect(x + 2, 76, 30, 40);
-      g.fillRect(x + 36, 76, 30, 40);
-      // Light reflection
-      g.fillStyle(0xffffff, 0.2);
-      g.fillRect(x + 4, 34, 8, 6);
+    for (let x = 8; x < 480; x += 130) {
+      g.fillStyle(0x7f8aa3); g.fillRect(x, 96, 92, 70);          // partition panel
+      g.fillStyle(0x8e98b0); g.fillRect(x + 3, 99, 86, 8);       // top rail highlight
+      g.fillStyle(0x6c7691); g.fillRect(x, 160, 92, 6);          // base shadow
+      // sticky-note board
+      g.fillStyle(0xf2e9a8); g.fillRect(x + 16, 116, 12, 12);
+      g.fillStyle(0xa8d6f2); g.fillRect(x + 34, 120, 12, 12);
+      g.fillStyle(0xf2b6c4); g.fillRect(x + 56, 114, 12, 12);
     }
-
-    g.generateTexture('background_mid', 480, 270);
+    // round wall clock
+    g.fillStyle(0xf4f2ea); g.fillCircle(240, 60, 16);
+    g.fillStyle(0x4a4f5c); g.fillCircle(240, 60, 16); g.fillStyle(0xf4f2ea); g.fillCircle(240, 60, 13);
+    g.fillStyle(0x2a2f3a); g.fillRect(239, 50, 2, 11); g.fillRect(240, 59, 8, 2);
+    g.generateTexture('background_mid_office', 480, 270);
     g.destroy();
   }
 
-  private generateBackgroundNear(): void {
-    // Near parallax layer — desk silhouettes (480×270)
+  private makeOfficeNear(): void {
+    // Foreground desks with monitors + chairs + a plant.
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     g.clear();
-
-    // Desk silhouettes at bottom
-    for (let x = 0; x < 480; x += 110) {
-      // Desk surface
-      g.fillStyle(0x3a2a10, 0.5);
-      g.fillRect(x + 5, 200, 90, 10);
-      // Monitor
-      g.fillStyle(0x222222, 0.5);
-      g.fillRect(x + 10, 175, 40, 26);
-      g.fillStyle(0x111111, 0.4);
-      g.fillRect(x + 12, 177, 36, 22);
-      // Chair
-      g.fillStyle(0x333333, 0.4);
-      g.fillRect(x + 60, 195, 24, 16);
-      g.fillRect(x + 66, 180, 12, 16);
+    for (let x = -10; x < 480; x += 122) {
+      g.fillStyle(0x5a4424); g.fillRect(x + 6, 206, 96, 12);     // desk top
+      g.fillStyle(0x3c2c16); g.fillRect(x + 6, 218, 96, 6);
+      g.fillStyle(0x46341a); g.fillRect(x + 14, 224, 6, 30); g.fillRect(x + 88, 224, 6, 30); // legs
+      g.fillStyle(0x23262e); g.fillRect(x + 16, 178, 44, 28);    // monitor
+      g.fillStyle(0x3a6ea5); g.fillRect(x + 18, 180, 40, 24);
+      g.fillStyle(0x14161c); g.fillRect(x + 34, 206, 8, 4);      // monitor stand
+      // office chair
+      g.fillStyle(0x2c2f38); g.fillRect(x + 70, 200, 26, 8); g.fillRect(x + 78, 176, 12, 26);
+      g.fillStyle(0x14161c); g.fillRect(x + 80, 208, 4, 24);
+      // potted plant
+      g.fillStyle(0x2f7d3a); g.fillRect(x + 104, 184, 14, 22);
+      g.fillStyle(0x8a5a2a); g.fillRect(x + 105, 204, 12, 12);
     }
+    g.generateTexture('background_near_office', 480, 270);
+    g.destroy();
+  }
 
-    g.generateTexture('background_near', 480, 270);
+  private makeServerMid(): void {
+    // Rows of distant server cabinets with status LEDs.
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+    for (let x = 6; x < 480; x += 66) {
+      g.fillStyle(0x2a3344); g.fillRect(x, 70, 54, 150);         // cabinet
+      g.fillStyle(0x344056); g.fillRect(x + 2, 72, 50, 4);       // top edge
+      g.fillStyle(0x0e141d); g.fillRect(x + 5, 80, 44, 132);     // dark front
+      for (let y = 86; y < 206; y += 12) {                       // rack units
+        g.fillStyle(0x1b2230); g.fillRect(x + 7, y, 40, 9);
+        g.fillStyle((x + y) % 24 < 12 ? 0x33dd66 : 0x1f7a3a); g.fillRect(x + 9, y + 3, 3, 3);
+        g.fillStyle((x + y) % 36 < 12 ? 0x44aaff : 0x1f5a8a); g.fillRect(x + 14, y + 3, 3, 3);
+      }
+    }
+    g.generateTexture('background_mid_server', 480, 270);
+    g.destroy();
+  }
+
+  private makeServerNear(): void {
+    // Foreground overhead cable trays + hanging bundles.
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+    g.fillStyle(0x10151d); g.fillRect(0, 188, 480, 82);          // raised-floor edge
+    g.fillStyle(0x1b2430); g.fillRect(0, 188, 480, 5);
+    const cable = [0xcc3a3a, 0x3acc5a, 0x3a7acc, 0xccaa3a, 0xaa3acc];
+    for (let x = 18; x < 480; x += 54) {                          // hanging cables from top
+      const c = cable[(x / 54 | 0) % cable.length];
+      g.fillStyle(c); g.fillRect(x, 0, 4, 40 + ((x % 3) * 10));
+      g.fillStyle(0x0c0f15); g.fillRect(x - 6, 0, 16, 8);
+    }
+    g.generateTexture('background_near_server', 480, 270);
+    g.destroy();
+  }
+
+  private makeDataMid(): void {
+    // Glowing red server rows receding into the dark.
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+    for (let x = 4; x < 480; x += 74) {
+      g.fillStyle(0x2a0c0c); g.fillRect(x, 60, 60, 170);
+      g.fillStyle(0x3a1010); g.fillRect(x + 2, 62, 56, 4);
+      g.fillStyle(0x120404); g.fillRect(x + 5, 70, 50, 152);
+      for (let y = 78; y < 214; y += 11) {
+        const on = (x + y) % 22 < 11;
+        g.fillStyle(on ? 0xff3030 : 0x551010); g.fillRect(x + 8, y, 4, 3);
+        g.fillStyle(on ? 0xff8030 : 0x552010); g.fillRect(x + 16, y, 4, 3);
+        g.fillStyle(0x331515); g.fillRect(x + 26, y, 24, 3);
+      }
+    }
+    g.generateTexture('background_mid_data', 480, 270);
+    g.destroy();
+  }
+
+  private makeDataNear(): void {
+    // Foreground dark server pillars with red glow + warning stripes.
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+    g.fillStyle(0x180404); g.fillRect(0, 196, 480, 74);
+    for (let x = -8; x < 480; x += 150) {
+      g.fillStyle(0x220808); g.fillRect(x + 10, 150, 40, 90);     // pillar
+      g.fillStyle(0x3a0c0c); g.fillRect(x + 10, 150, 40, 5);
+      g.fillStyle(0xff2a2a); g.fillRect(x + 16, 162, 28, 3);      // glowing strip
+      g.fillStyle(0x991a1a); g.fillRect(x + 16, 172, 28, 2);
+      // hazard chevrons at the base
+      g.fillStyle(0xd8a01e);
+      for (let i = 0; i < 5; i++) g.fillRect(x + 12 + i * 8, 236, 5, 6);
+      g.fillStyle(0x180404);
+      for (let i = 0; i < 5; i++) g.fillRect(x + 16 + i * 8, 236, 3, 6);
+    }
+    g.generateTexture('background_near_data', 480, 270);
     g.destroy();
   }
 }

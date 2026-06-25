@@ -100,9 +100,16 @@ export class HudScene extends Phaser.Scene {
       this.createTouchControls();
     }
 
-    // Registry listener
-    this.registry.events.on('changedata', (_parent: unknown, key: string, value: unknown) => {
+    // Registry listener. The registry's event emitter is GAME-GLOBAL and lives
+    // longer than this scene, so the handler MUST be removed on shutdown —
+    // otherwise a stopped HudScene keeps reacting to a later GameScene's
+    // registry.set() and operates on destroyed Text objects (crash).
+    const onChange = (_parent: unknown, key: string, value: unknown) => {
       this.handleRegistryChange(key, value);
+    };
+    this.registry.events.on('changedata', onChange);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.registry.events.off('changedata', onChange);
     });
 
     this.syncAll();

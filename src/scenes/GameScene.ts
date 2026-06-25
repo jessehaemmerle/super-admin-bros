@@ -187,11 +187,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createBackground(theme: string, worldW: number, worldH: number): void {
+    const suffix  = theme === 'serverroom' ? 'server'
+                  : theme === 'datacenter' ? 'data'
+                  : 'office';
     const farKey  = theme === 'serverroom' ? 'background_serverroom'
                   : theme === 'datacenter' ? 'background_datacenter'
                   : 'background';
-    const midKey  = 'background_mid';
-    const nearKey = 'background_near';
+    const midKey  = `background_mid_${suffix}`;
+    const nearKey = `background_near_${suffix}`;
 
     this.bgFar = this.add.tileSprite(0, 0, worldW, worldH, farKey)
       .setOrigin(0, 0).setScrollFactor(0.1).setDepth(-10);
