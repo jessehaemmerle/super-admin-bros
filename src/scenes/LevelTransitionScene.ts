@@ -5,6 +5,7 @@ import { AudioSystem } from '../utils/AudioSystem';
 interface TransitionData {
   levelIndex: number;
   numPlayers: number;
+  score?: number;
 }
 
 const LEVEL_NAMES = ['', 'LEVEL 1 — BÜRO', 'LEVEL 2 — SERVERRAUM', 'LEVEL 3 — RECHENZENTRUM'];
@@ -106,7 +107,8 @@ export class LevelTransitionScene extends Phaser.Scene {
       this.scene.stop('HudScene');
       this.scene.start('GameScene', {
         levelIndex: this.transitionData.levelIndex,
-        numPlayers: this.transitionData.numPlayers
+        numPlayers: this.transitionData.numPlayers,
+        score: this.transitionData.score ?? 0
       });
     });
   }

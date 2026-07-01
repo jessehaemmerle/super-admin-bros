@@ -71,8 +71,16 @@ export class MenuScene extends Phaser.Scene {
       fontSize: '7px', color: '#666666', fontFamily: 'monospace'
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    this.p1Btn.on('pointerdown', () => this.setPlayers(1));
-    this.p2Btn.on('pointerdown', () => this.setPlayers(2));
+    // stopPropagation: the scene-level pointerdown below starts the game, and
+    // it would otherwise fire on the same click that selects the player count.
+    this.p1Btn.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.setPlayers(1);
+    });
+    this.p2Btn.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.setPlayers(2);
+    });
 
     // ── Steuerung ─────────────────────────────────────
     this.add.text(GAME_WIDTH / 2, 190, '── STEUERUNG ──', {

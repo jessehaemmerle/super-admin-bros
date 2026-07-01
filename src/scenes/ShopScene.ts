@@ -264,7 +264,8 @@ export class ShopScene extends Phaser.Scene {
     const next = this.shopData.levelIndex;
     this.scene.start('LevelTransitionScene', {
       levelIndex: next,
-      numPlayers: this.shopData.numPlayers
+      numPlayers: this.shopData.numPlayers,
+      score: this.shopData.score
     });
   }
 }

@@ -1,9 +1,10 @@
 export class AudioSystem {
   private static instance: AudioSystem | null = null;
   private ctx: AudioContext | null = null;
-  private musicNodes: AudioNode[] = [];
+  private musicNodes: AudioScheduledSourceNode[] = [];
   private musicPlaying = false;
   private masterGain: GainNode | null = null;
+  private musicGain: GainNode | null = null;
   private musicScheduleTimer: ReturnType<typeof setTimeout> | null = null;
   private musicStartTime = 0;
   private loopLength = 0;
@@ -34,7 +35,8 @@ export class AudioSystem {
     startTime: number,
     duration: number,
     gainVal: number,
-    freqEnd?: number
+    freqEnd?: number,
+    dest?: AudioNode
   ): void {
     const ctx = this.getContext();
     const osc = ctx.createOscillator();
@@ -50,14 +52,11 @@ export class AudioSystem {
     gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
     osc.connect(gain);
-    if (this.masterGain) {
-      gain.connect(this.masterGain);
-    } else {
-      gain.connect(ctx.destination);
-    }
+    gain.connect(dest ?? this.masterGain ?? ctx.destination);
 
     osc.start(startTime);
     osc.stop(startTime + duration + 0.01);
+    if (dest) this.musicNodes.push(osc);
   }
 
   playJump(): void {
@@ -197,6 +196,15 @@ export class AudioSystem {
     const ctx = this.getContext();
     const t = ctx.currentTime + 0.05;
 
+    // All music routes through its own gain node so stopMusic() can cut the
+    // already-scheduled loop instantly instead of letting it ring out.
+    if (!this.musicGain) {
+      this.musicGain = ctx.createGain();
+      this.musicGain.connect(this.masterGain ?? ctx.destination);
+    }
+    const music = this.musicGain;
+    this.musicNodes = [];
+
     const BPM = 140;
     const beat = 60 / BPM;
     const bar = beat * 4;
@@ -268,14 +276,14 @@ export class AudioSystem {
     // Schedule bass (repeats every 2 bars for 8 bars)
     for (let rep = 0; rep < 4; rep++) {
       bassNotes.forEach(note => {
-        this.createOscillator('sawtooth', note.freq, t + rep * bar * 2 + note.time, note.dur, 0.25);
+        this.createOscillator('sawtooth', note.freq, t + rep * bar * 2 + note.time, note.dur, 0.25, undefined, music);
       });
     }
 
     // Schedule melody (4 bars, repeat twice)
     for (let rep = 0; rep < 2; rep++) {
       melodyNotes.forEach(note => {
-        this.createOscillator('square', note.freq, t + rep * bar * 4 + note.time, note.dur, 0.15);
+        this.createOscillator('square', note.freq, t + rep * bar * 4 + note.time, note.dur, 0.15, undefined, music);
       });
     }
 
@@ -283,7 +291,7 @@ export class AudioSystem {
     chordTimes.forEach((time, i) => {
       const freqs = chordFreqs[i % chordFreqs.length];
       freqs.forEach(freq => {
-        this.createOscillator('square', freq, t + time, beat * 0.4, 0.08);
+        this.createOscillator('square', freq, t + time, beat * 0.4, 0.08, undefined, music);
       });
     });
 
@@ -303,11 +311,7 @@ export class AudioSystem {
       hiGain.gain.setValueAtTime(i % 2 === 0 ? 0.12 : 0.06, hihatTime);
       hiGain.gain.exponentialRampToValueAtTime(0.001, hihatTime + 0.03);
       source.connect(hiGain);
-      if (this.masterGain) {
-        hiGain.connect(this.masterGain);
-      } else {
-        hiGain.connect(hihatCtx.destination);
-      }
+      hiGain.connect(music);
       source.start(hihatTime);
       source.stop(hihatTime + 0.04);
       this.musicNodes.push(source);
@@ -318,7 +322,7 @@ export class AudioSystem {
       const kickBeats = [0, 2];
       kickBeats.forEach(b => {
         const kickTime = t + bar2 * bar + b * beat;
-        this.createOscillator('sine', 80, kickTime, 0.15, 0.5, 20);
+        this.createOscillator('sine', 80, kickTime, 0.15, 0.5, 20, music);
       });
     }
 
@@ -340,6 +344,15 @@ export class AudioSystem {
       clearTimeout(this.musicScheduleTimer);
       this.musicScheduleTimer = null;
     }
+    // Silence everything already scheduled for the current loop.
+    if (this.musicGain) {
+      this.musicGain.disconnect();
+      this.musicGain = null;
+    }
+    for (const node of this.musicNodes) {
+      try { node.stop(); } catch { /* already stopped */ }
+    }
+    this.musicNodes = [];
   }
 
   setVolume(vol: number): void {

@@ -41,8 +41,10 @@ function buildData(): number[][] {
   for (let row of [14, 15, 16]) {
     for (let col = 148; col < W; col++) d[row][col] = 1;
   }
-  // Boss arena walls
+  // Boss arena wall — leave rows 12-13 open so the player can walk in from
+  // the checkpoint; a full-height wall would seal the arena shut.
   for (let row = 0; row < H; row++) {
+    if (row === 12 || row === 13) continue;
     d[row][148] = 2;
   }
   // Boss arena ceiling

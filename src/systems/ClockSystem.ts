@@ -7,6 +7,7 @@ export class ClockSystem {
   private elapsed = 0; // real seconds elapsed
   private escalated = false;
   private alarmed = false;
+  private failed = false;
   private onFailCallback?: () => void;
   private onEscalateCallback?: () => void;
 
@@ -23,6 +24,7 @@ export class ClockSystem {
     this.elapsed = 0;
     this.escalated = false;
     this.alarmed = false;
+    this.failed = false;
   }
 
   update(delta: number): void {
@@ -50,7 +52,8 @@ export class ClockSystem {
       this.alarmed = true;
       AudioSystem.getInstance().play17Alarm();
     }
-    if (this.elapsed >= CLOCK.REAL_SECONDS) {
+    if (!this.failed && this.elapsed >= CLOCK.REAL_SECONDS) {
+      this.failed = true;
       if (this.onFailCallback) {
         this.onFailCallback();
       }

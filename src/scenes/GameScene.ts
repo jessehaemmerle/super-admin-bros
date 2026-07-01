@@ -24,6 +24,7 @@ const LEVELS: LevelConfig[] = [LEVEL_1, LEVEL_2, LEVEL_3];
 interface GameSceneData {
   levelIndex?: number;
   numPlayers?: number;
+  score?: number;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -66,6 +67,11 @@ export class GameScene extends Phaser.Scene {
   private checkpointActivated = false;
   private playerDeathHandled = false;
   private p2DeathHandled = false;
+  private p1Out = false;
+  private p2Out = false;
+  private p2Lives = 0;
+  private bossDefeated = false;
+  private startScore = 0;
 
   // Combo system
   private comboCount = 0;
@@ -78,6 +84,7 @@ export class GameScene extends Phaser.Scene {
   init(data: GameSceneData): void {
     this.levelIndex = data.levelIndex ?? 1;
     this.numPlayers = data.numPlayers ?? 1;
+    this.startScore = data.score ?? 0;
     this.levelConfig = LEVELS[this.levelIndex - 1] ?? LEVEL_1;
   }
 
@@ -87,6 +94,9 @@ export class GameScene extends Phaser.Scene {
     this.checkpointActivated = false;
     this.playerDeathHandled = false;
     this.p2DeathHandled = false;
+    this.p1Out = false;
+    this.p2Out = false;
+    this.bossDefeated = false;
     this.enemies = [];
     this.printers = [];
     this.ceoEnemy = undefined;
@@ -101,10 +111,11 @@ export class GameScene extends Phaser.Scene {
 
     const upgrades = UpgradeSystem.get();
     const startLives = 3 + upgrades.extraLives;
+    this.p2Lives = this.numPlayers > 1 ? startLives : 0;
 
     this.registry.set('lives',        startLives);
-    this.registry.set('lives2',       this.numPlayers > 1 ? startLives : 0);
-    this.registry.set('score',        0);
+    this.registry.set('lives2',       this.p2Lives);
+    this.registry.set('score',        this.startScore);
     this.registry.set('docs',         0);
     this.registry.set('clockTime',    '14:00');
     this.registry.set('clockProgress',0);
@@ -125,7 +136,7 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.scoreSystem = new ScoreSystem(this);
-    this.scoreSystem.init(startLives);
+    this.scoreSystem.init(startLives, this.startScore);
 
     // Extend the bottom of the physics world below the level so the player can
     // actually FALL into pits (a death-plane check in update() then costs a life).
@@ -181,11 +192,15 @@ export class GameScene extends Phaser.Scene {
 
     this.audio.startMusic();
 
+    // Scene event listeners survive a scene restart, so drop stale handlers
+    // from a previous level first — they capture the old level's VPN layout.
+    this.events.off('player_down');
+    this.events.off('player2_down');
     this.events.on('player_down', (x: number, y: number) => {
-      this.checkVpnEntry(this.player, x, y, lv);
+      this.checkVpnEntry(this.player, x, y, this.levelConfig);
     });
     this.events.on('player2_down', (x: number, y: number) => {
-      if (this.player2) this.checkVpnEntry(this.player2, x, y, lv);
+      if (this.player2) this.checkVpnEntry(this.player2, x, y, this.levelConfig);
     });
   }
 
@@ -300,7 +315,6 @@ export class GameScene extends Phaser.Scene {
         }
         case 'phishing_mail': {
           const pm = new PhishingMail(this, x, y);
-          pm.setInvertCallback((dur) => this.player.invertControls(dur));
           pm.init();
           this.enemies.push(pm);
           this.enemyGroup.add(pm);
@@ -362,16 +376,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.physics.add.collider(p.getBullets(), this.groundLayer, (bullet) => { handleBulletHit(bullet as Phaser.GameObjects.GameObject); });
-    this.physics.add.overlap(this.projectilesGroup, p as unknown as Phaser.Physics.Arcade.Sprite, (proj) => {
-      if (p.isAlive()) { p.die(); this.onEnemyKilled(p, true); }
-      (proj as Phaser.Physics.Arcade.Sprite).destroy();
-    });
-    if (this.player2) {
-      this.physics.add.overlap(this.p2projectilesGroup, p as unknown as Phaser.Physics.Arcade.Sprite, (proj) => {
-        if (p.isAlive()) { p.die(); this.onEnemyKilled(p, true); }
-        (proj as Phaser.Physics.Arcade.Sprite).destroy();
-      });
-    }
+    // Projectiles vs the printer itself are already covered by the generic
+    // projectilesGroup ↔ enemyGroup overlap in setupCollisions().
   }
 
   private setupCeoBullets(ceo: CeoEnemy): void {
@@ -513,23 +519,29 @@ export class GameScene extends Phaser.Scene {
     collectPowerUp(this.player);
     if (this.player2) collectPowerUp(this.player2);
 
-    // Player 1 projectiles vs enemies
-    this.physics.add.overlap(this.projectilesGroup, this.enemyGroup, (proj, enemy) => {
+    // Projectiles vs enemies — the boss only takes 1 HP per hit and awards its
+    // score once via onBossDead, never per projectile.
+    const projectileHit: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (proj, enemy) => {
       const e = enemy as unknown as Enemy;
-      if (e.isAlive()) { e.die(); this.onEnemyKilled(e, true); }
+      if (e.isAlive()) {
+        if (e instanceof CeoEnemy) {
+          const dead = e.takeBossHit();
+          if (dead) this.onBossDead();
+        } else {
+          e.die();
+          this.onEnemyKilled(e, true);
+        }
+      }
       (proj as Phaser.Physics.Arcade.Sprite).destroy();
-    });
+    };
+
+    this.physics.add.overlap(this.projectilesGroup, this.enemyGroup, projectileHit);
     this.physics.add.collider(this.projectilesGroup, this.groundLayer, (proj) => {
       (proj as Phaser.Physics.Arcade.Sprite).destroy();
     });
 
-    // Player 2 projectiles vs enemies
     if (this.player2) {
-      this.physics.add.overlap(this.p2projectilesGroup, this.enemyGroup, (proj, enemy) => {
-        const e = enemy as unknown as Enemy;
-        if (e.isAlive()) { e.die(); this.onEnemyKilled(e, true); }
-        (proj as Phaser.Physics.Arcade.Sprite).destroy();
-      });
+      this.physics.add.overlap(this.p2projectilesGroup, this.enemyGroup, projectileHit);
       this.physics.add.collider(this.p2projectilesGroup, this.groundLayer, (proj) => {
         (proj as Phaser.Physics.Arcade.Sprite).destroy();
       });
@@ -555,12 +567,14 @@ export class GameScene extends Phaser.Scene {
       playerRef.setVelocityY(-250);
       AudioSystem.getInstance().playStomp();
     } else {
+      // Invert BEFORE takeDamage: invertControls is a no-op while invulnerable,
+      // and takeDamage starts the invulnerability window.
+      if (e instanceof PhishingMail) playerRef.invertControls(1500);
       const died = playerRef.takeDamage();
       if (died) {
         if (isP2) this.handleP2Death();
         else this.handlePlayerDeath();
       }
-      if (e instanceof PhishingMail) (e as PhishingMail).onHitPlayer();
     }
   }
 
@@ -586,6 +600,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onBossDead(): void {
+    // Reached both directly (stomp/projectile that lands the killing blow) and
+    // via the CeoEnemy die-callback — reward exactly once.
+    if (this.bossDefeated) return;
+    this.bossDefeated = true;
     AudioSystem.getInstance().playBossDie();
     this.scoreSystem.addScore(this.ceoEnemy?.getScore() ?? 2000);
     this.showScorePopup(
@@ -673,31 +691,50 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerDeath(): void {
     if (this.playerDeathHandled) return;
     this.playerDeathHandled = true;
-    const gameOver = this.scoreSystem.loseLife();
-    if (gameOver && (!this.player2 || this.p2DeathHandled)) {
-      this.audio.stopMusic();
-      this.time.delayedCall(1500, () => this.endGame(false));
-    } else if (!gameOver) {
+    const outOfLives = this.scoreSystem.loseLife();
+    if (!outOfLives) {
       this.time.delayedCall(1500, () => {
         this.playerDeathHandled = false;
         this.player.respawn();
         if (!this.audio.isMusicPlaying()) this.audio.startMusic();
       });
+      return;
+    }
+    // Player 1 is out for good; the game continues as long as player 2 lives.
+    this.p1Out = true;
+    if (!this.player2 || this.p2Out) {
+      this.audio.stopMusic();
+      this.time.delayedCall(1500, () => this.endGame(false));
     } else {
-      this.time.delayedCall(1500, () => {
-        this.playerDeathHandled = false;
-        this.player.respawn();
-      });
+      this.time.delayedCall(1500, () => this.removePlayer(this.player));
     }
   }
 
   private handleP2Death(): void {
     if (!this.player2 || this.p2DeathHandled) return;
     this.p2DeathHandled = true;
-    this.time.delayedCall(1500, () => {
-      this.p2DeathHandled = false;
-      this.player2!.respawn();
-    });
+    this.p2Lives--;
+    this.registry.set('lives2', Math.max(0, this.p2Lives));
+    if (this.p2Lives > 0) {
+      this.time.delayedCall(1500, () => {
+        this.p2DeathHandled = false;
+        this.player2!.respawn();
+      });
+      return;
+    }
+    this.p2Out = true;
+    if (this.p1Out) {
+      this.audio.stopMusic();
+      this.time.delayedCall(1500, () => this.endGame(false));
+    } else {
+      this.time.delayedCall(1500, () => this.removePlayer(this.player2!));
+    }
+  }
+
+  private removePlayer(p: Player): void {
+    p.setActive(false).setVisible(false);
+    const body = p.body as Phaser.Physics.Arcade.Body;
+    if (body) body.enable = false;
   }
 
   private handleClockFail(): void {
@@ -717,8 +754,9 @@ export class GameScene extends Phaser.Scene {
     const lv = this.levelConfig;
     const cx = lv.checkpointCol * TILE_SIZE + TILE_SIZE / 2;
     const cy = lv.checkpointRow * TILE_SIZE + TILE_SIZE / 2;
-    const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, cx, cy);
-    if (dist < 32) {
+    const near = (p?: Player) =>
+      !!p && !p.isDead && Phaser.Math.Distance.Between(p.x, p.y, cx, cy) < 32;
+    if (near(this.player) || near(this.player2)) {
       this.checkpointActivated = true;
       this.player.setCheckpoint(cx, cy - 8);
       if (this.player2) this.player2.setCheckpoint(cx + 20, cy - 8);
@@ -739,9 +777,9 @@ export class GameScene extends Phaser.Scene {
     const gx = lv.goalCol * TILE_SIZE + TILE_SIZE / 2;
     const gy = lv.goalRow * TILE_SIZE + TILE_SIZE / 2;
 
-    const p1Dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, gx, gy);
-    const reached = p1Dist < 32 ||
-      (this.player2 ? Phaser.Math.Distance.Between(this.player2.x, this.player2.y, gx, gy) < 32 : false);
+    const atGoal = (p?: Player) =>
+      !!p && !p.isDead && Phaser.Math.Distance.Between(p.x, p.y, gx, gy) < 32;
+    const reached = atGoal(this.player) || atGoal(this.player2);
 
     if (reached) {
       this.levelComplete = true;
@@ -823,6 +861,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.player2 && !this.player2.isDead && this.player2.y > pitY) {
       this.player2.isDead = true;
+      AudioSystem.getInstance().playDamage();
     }
 
     // Player 1
@@ -841,23 +880,33 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Enemies
-    const primaryTarget = this.player;
+    // Enemies — chase whichever player is still in the game
+    const primaryTarget = (this.player.isDead && this.player2 && !this.player2.isDead)
+      ? this.player2
+      : this.player;
     for (const enemy of this.enemies) {
       if (enemy.isAlive() && enemy.active) {
+        const sprite = enemy as unknown as Phaser.Physics.Arcade.Sprite;
+        // Walkers that marched into a pit are gone — clean them up.
+        if (sprite.y > pitY + 32) {
+          enemy.isDead = true;
+          sprite.destroy();
+          continue;
+        }
         enemy.updateAI(primaryTarget, delta, escalated);
-        const ex = (enemy as unknown as Phaser.Physics.Arcade.Sprite).x;
-        if (ex < 0) (enemy as unknown as Phaser.Physics.Arcade.Sprite).setX(8);
-        if (ex > this.levelConfig.width * TILE_SIZE) {
-          (enemy as unknown as Phaser.Physics.Arcade.Sprite).setX(this.levelConfig.width * TILE_SIZE - 8);
+        if (sprite.x < 0) sprite.setX(8);
+        if (sprite.x > this.levelConfig.width * TILE_SIZE) {
+          sprite.setX(this.levelConfig.width * TILE_SIZE - 8);
         }
       }
     }
 
-    // 2P camera: follow midpoint
+    // 2P camera: follow midpoint (or the surviving player once one is out)
     if (this.numPlayers === 2 && this.player2) {
-      const midX = (this.player.x + this.player2.x) / 2;
-      const midY = (this.player.y + this.player2.y) / 2;
+      const midX = this.p1Out ? this.player2.x : this.p2Out ? this.player.x
+        : (this.player.x + this.player2.x) / 2;
+      const midY = this.p1Out ? this.player2.y : this.p2Out ? this.player.y
+        : (this.player.y + this.player2.y) / 2;
       const cam = this.cameras.main;
       const halfW = cam.width / 2;
       const halfH = cam.height / 2;

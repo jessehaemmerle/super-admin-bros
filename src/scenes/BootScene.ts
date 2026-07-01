@@ -535,7 +535,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   private generateTileset(): void {
-    // 10 tiles × 16px wide × 16px tall = 160×16
+    // 12 tiles × 16px wide × 16px tall = 192×16
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     g.clear();
 
@@ -624,7 +624,31 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xffffff);                                     // exit arrow →
     g.fillRect(148, 6, 4, 1); g.fillTriangle(151, 4, 151, 8, 154, 6);
 
-    g.generateTexture('tileset', 160, 16);
+    // 10: server rack — solid dark cabinet with status LEDs (Level 2/3 walls).
+    g.fillStyle(0x1e2a3a); g.fillRect(160, 0, 16, 16);        // cabinet frame
+    g.fillStyle(0x2c3a4e); g.fillRect(160, 0, 16, 1); g.fillRect(160, 0, 1, 16); // light TL
+    g.fillStyle(0x121a24); g.fillRect(160, 15, 16, 1); g.fillRect(175, 0, 1, 16); // dark BR
+    g.fillStyle(0x0a1220); g.fillRect(162, 2, 12, 12);        // dark front panel
+    g.fillStyle(0x1b2430);                                     // rack units
+    g.fillRect(163, 3, 10, 3); g.fillRect(163, 7, 10, 3); g.fillRect(163, 11, 10, 3);
+    g.fillStyle(0x33dd66);                                     // green LEDs
+    g.fillRect(164, 4, 1, 1); g.fillRect(164, 8, 1, 1); g.fillRect(164, 12, 1, 1);
+    g.fillStyle(0x44aaff);                                     // blue LEDs
+    g.fillRect(166, 4, 1, 1); g.fillRect(166, 12, 1, 1);
+    g.fillStyle(0xffaa00); g.fillRect(166, 8, 1, 1);           // amber LED
+
+    // 11: fake wall — same masonry as tile 2 so the secret passage blends in.
+    g.fillStyle(0x9c5a3c); g.fillRect(176, 0, 16, 16);
+    g.fillStyle(0xb56e4a); g.fillRect(176, 0, 16, 1);
+    g.fillStyle(0x6e3c26); g.fillRect(176, 15, 16, 1);
+    g.fillStyle(0x5a3020);
+    g.fillRect(176, 7, 16, 2);
+    g.fillRect(184, 0, 1, 7); g.fillRect(180, 9, 1, 7);
+    g.fillStyle(0xae6646);
+    g.fillRect(177, 2, 6, 4); g.fillRect(186, 2, 5, 4);
+    g.fillRect(177, 10, 2, 4); g.fillRect(182, 10, 7, 4);
+
+    g.generateTexture('tileset', 192, 16);
     g.destroy();
     this.sliceSheet('tileset', 16, 16);
   }

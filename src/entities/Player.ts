@@ -43,6 +43,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private rising = false;
   private canJump = true;
   private coyoteActive = false;
+  private prevTouchJump = false;
 
   // Timers
   private invulTimer = 0;
@@ -148,6 +149,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         } else {
           // First go big, then sudo
           this.powerState = 'big';
+          this.updateSprite();
+          this.resizeBody();
           this.scene.time.delayedCall(100, () => {
             this.powerState = 'sudo';
             audio.playPowerUp();
@@ -252,6 +255,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.invulTimer = 0;
     this.controlsInverted = false;
     this.invertControlsTimer = 0;
+    this.energyDrinkActive = false;
+    this.energyDrinkTimer = 0;
+    this.rising = false;
+    this.jumpBufferTimer = 0;
     this.clearTint();
     this.setAlpha(1);
     this.updateSprite();
@@ -282,12 +289,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(delta: number): void {
-    if (!this.cursors || this.isDead) {
-      if (this.isDead) {
-        this.updateAnimation();
-      }
+    if (this.isDead) {
+      this.updateAnimation();
       return;
     }
+    // Player 1 uses cursors/WASD, player 2 uses p2keys — gate on the set that
+    // actually belongs to this player (P2 never gets cursors assigned).
+    const hasKeys = this.playerId === 1 ? !!this.cursors : !!this.p2keys;
+    if (!hasKeys) return;
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (!body) return;
@@ -392,12 +401,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    // Jump buffer
-    const jumpJustPressed = this.playerId === 1
+    // Jump buffer — touch buttons have no JustDown, so edge-detect manually
+    const touchJump = this.playerId === 1 ? TouchInput.jump : TouchInput.p2jump;
+    const touchJumpJust = touchJump && !this.prevTouchJump;
+    this.prevTouchJump = touchJump;
+
+    const jumpJustPressed = (this.playerId === 1
       ? (Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
          Phaser.Input.Keyboard.JustDown(this.wasd.up) ||
          Phaser.Input.Keyboard.JustDown(this.cursors.space))
-      : (this.p2keys ? Phaser.Input.Keyboard.JustDown(this.p2keys.up) : false);
+      : (this.p2keys ? Phaser.Input.Keyboard.JustDown(this.p2keys.up) : false)
+    ) || touchJumpJust;
 
     if (jumpJustPressed) {
       this.jumpBufferTimer = PHYSICS.JUMP_BUFFER;

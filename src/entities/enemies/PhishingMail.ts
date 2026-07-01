@@ -6,16 +6,11 @@ export class PhishingMail extends Enemy {
   private sinTime = 0;
   private amplitude = 30;
   private baseY: number;
-  private invertControlsCallback?: (duration: number) => void;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'phishing_mail');
     this.baseY = y;
     this.scoreValue = 150;
-  }
-
-  setInvertCallback(cb: (duration: number) => void): void {
-    this.invertControlsCallback = cb;
   }
 
   init(): void {
@@ -27,13 +22,6 @@ export class PhishingMail extends Enemy {
       body.setCollideWorldBounds(false);
     }
     this.anims.play('phishing_fly', true);
-  }
-
-  onHitPlayer(): void {
-    // Invert controls for 1.5 seconds
-    if (this.invertControlsCallback) {
-      this.invertControlsCallback(1500);
-    }
   }
 
   updateAI(player: Phaser.GameObjects.GameObject, delta: number, escalated: boolean): void {

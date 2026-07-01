@@ -10,8 +10,8 @@ export class ScoreSystem {
     this.scene = scene;
   }
 
-  init(lives: number): void {
-    this.score = 0;
+  init(lives: number, startScore = 0): void {
+    this.score = startScore;
     this.docs = 0;
     this.lives = lives;
     this.sync();
