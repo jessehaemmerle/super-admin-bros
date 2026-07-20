@@ -35,4 +35,4 @@ export const SHOP_PRICES = {
   START_SHIELD: 350
 } as const;
 
-export const TOTAL_LEVELS = 3;
+export const TOTAL_LEVELS = 5;

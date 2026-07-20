@@ -12,7 +12,7 @@
 // 10 = server rack (solid, Level 2)
 // 11 = fake wall (renders as brick, no collision)
 
-export type QuestionContent = 'coffee' | 'doc' | 'doc5' | 'energy_drink' | 'sudo_flower' | 'backup_tape';
+export type QuestionContent = 'coffee' | 'doc' | 'doc5' | 'energy_drink' | 'sudo_flower' | 'backup_tape' | 'hotfix';
 
 export interface QuestionBlock {
   col: number;
@@ -27,9 +27,25 @@ export interface PlatformDef {
 }
 
 export interface EnemyDef {
-  type: 'ticket' | 'printer' | 'phishing_mail' | 'clumsy_user' | 'buggy_code' | 'ceo';
+  type: 'ticket' | 'printer' | 'phishing_mail' | 'clumsy_user' | 'buggy_code' | 'virus' | 'ceo';
   tileX: number;
   tileY: number;
+}
+
+// Elevator-style platform, 3 tiles wide. Oscillates from its start position
+// `range` tiles along `axis` and back. col/row address the left tile.
+export interface MovingPlatformDef {
+  col: number;
+  row: number;
+  axis: 'x' | 'y';
+  range: number;
+  speed: number;
+}
+
+// Server fan on the floor — its updraft launches players upward.
+export interface FanDef {
+  col: number;
+  row: number;
 }
 
 export interface DocDef {
@@ -58,6 +74,8 @@ export interface LevelConfig {
   height: number;
   questionBlocks: QuestionBlock[];
   platforms: PlatformDef[];
+  movingPlatforms: MovingPlatformDef[];
+  fans: FanDef[];
   enemies: EnemyDef[];
   docPositions: DocDef[];
   vpn: VpnDef | null;
@@ -66,7 +84,7 @@ export interface LevelConfig {
   goalCol: number;
   goalRow: number;
   secretRooms: SecretRoom[];
-  backgroundTheme: 'office' | 'serverroom' | 'datacenter';
+  backgroundTheme: 'office' | 'serverroom' | 'datacenter' | 'cloud';
   hasBoss: boolean;
 }
 
@@ -173,6 +191,8 @@ export const LEVEL_1: LevelConfig = {
     { col: 169, row: 11, content: 'backup_tape' }
   ],
   platforms: L1_PLATFORMS,
+  movingPlatforms: [],
+  fans: [],
   enemies: [
     { type: 'ticket',       tileX: 16,  tileY: 14 },
     { type: 'ticket',       tileX: 32,  tileY: 14 },

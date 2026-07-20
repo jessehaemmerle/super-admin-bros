@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-export type PowerUpType = 'coffee' | 'sudo_flower' | 'energy_drink' | 'backup_tape' | 'doc' | 'doc5';
+export type PowerUpType = 'coffee' | 'sudo_flower' | 'energy_drink' | 'backup_tape' | 'hotfix' | 'doc' | 'doc5';
 
 export class PowerUp extends Phaser.Physics.Arcade.Sprite {
   public powerType: PowerUpType;

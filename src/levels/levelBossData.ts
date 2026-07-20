@@ -93,7 +93,7 @@ function buildDocs(): DocDef[] {
   return pos.map(([col, row]) => ({ col, row }));
 }
 
-export const LEVEL_3: LevelConfig = {
+export const LEVEL_BOSS: LevelConfig = {
   data: buildData(),
   width: W,
   height: H,
@@ -106,6 +106,8 @@ export const LEVEL_3: LevelConfig = {
     { col: 140, row: 7,  content: 'sudo_flower' }
   ],
   platforms: PLATFORMS,
+  movingPlatforms: [],
+  fans: [],
   enemies: [
     { type: 'ticket',       tileX: 5,   tileY: 14 },
     { type: 'buggy_code',   tileX: 25,  tileY: 10 },

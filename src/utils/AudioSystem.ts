@@ -179,6 +179,13 @@ export class AudioSystem {
     this.createOscillator('square', 523.25, t + 0.2, 0.2, 0.5);
   }
 
+  playFanBoost(): void {
+    const ctx = this.getContext();
+    const t = ctx.currentTime;
+    this.createOscillator('sawtooth', 150, t, 0.22, 0.2, 480);
+    this.createOscillator('sine', 300, t + 0.04, 0.18, 0.15, 700);
+  }
+
   playVpnEnter(): void {
     const ctx = this.getContext();
     const t = ctx.currentTime;

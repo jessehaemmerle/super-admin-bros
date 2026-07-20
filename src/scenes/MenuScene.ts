@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '../config';
+import { GAME_WIDTH, GAME_HEIGHT, TOTAL_LEVELS } from '../config';
 import { SaveSystem } from '../systems/SaveSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 
@@ -186,9 +186,12 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private startGame(): void {
+    // Dev shortcut: ?level=N starts directly in that level
+    const param = parseInt(new URLSearchParams(window.location.search).get('level') ?? '1', 10);
+    const startLevel = Phaser.Math.Clamp(Number.isNaN(param) ? 1 : param, 1, TOTAL_LEVELS);
     this.scene.stop('HudScene');
     this.scene.start('LevelTransitionScene', {
-      levelIndex: 1,
+      levelIndex: startLevel,
       numPlayers: this.selectedPlayers
     });
   }

@@ -60,6 +60,13 @@ export class ClockSystem {
     }
   }
 
+  // Hotfix power-up: winds the clock back. One real second equals one
+  // in-game minute (180 s ↔ 14:00-17:00), so `minutes` maps 1:1 to seconds.
+  rewind(minutes: number): void {
+    this.elapsed = Math.max(0, this.elapsed - minutes);
+    if (this.elapsed < 178) this.alarmed = false;
+  }
+
   getElapsed(): number {
     return this.elapsed;
   }

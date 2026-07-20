@@ -8,8 +8,22 @@ interface TransitionData {
   score?: number;
 }
 
-const LEVEL_NAMES = ['', 'LEVEL 1 — BÜRO', 'LEVEL 2 — SERVERRAUM', 'LEVEL 3 — RECHENZENTRUM'];
-const LEVEL_SUBTITLES = ['', 'Die Tickets häufen sich...', 'Die Server brennen!', 'Der CEO wartet.'];
+const LEVEL_NAMES = [
+  '',
+  'LEVEL 1 — BÜRO',
+  'LEVEL 2 — SERVERRAUM',
+  'LEVEL 3 — NETZWERK-ETAGE',
+  'LEVEL 4 — CLOUD',
+  'LEVEL 5 — RECHENZENTRUM'
+];
+const LEVEL_SUBTITLES = [
+  '',
+  'Die Tickets häufen sich...',
+  'Die Server brennen!',
+  'Viren im Netz — und überall Kabelsalat!',
+  'Migration! Bloß nicht abstürzen.',
+  'Der CEO wartet.'
+];
 
 export class LevelTransitionScene extends Phaser.Scene {
   private transitionData!: TransitionData;

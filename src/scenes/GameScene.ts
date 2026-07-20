@@ -6,6 +6,7 @@ import { Printer } from '../entities/enemies/Printer';
 import { PhishingMail } from '../entities/enemies/PhishingMail';
 import { ClumsyUser } from '../entities/enemies/ClumsyUser';
 import { BuggyCode } from '../entities/enemies/BuggyCode';
+import { Virus } from '../entities/enemies/Virus';
 import { CeoEnemy } from '../entities/enemies/CeoEnemy';
 import { Enemy } from '../entities/Enemy';
 import { PowerUp, PowerUpType } from '../entities/PowerUp';
@@ -14,12 +15,24 @@ import { ScoreSystem } from '../systems/ScoreSystem';
 import { SaveSystem } from '../systems/SaveSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { AudioSystem } from '../utils/AudioSystem';
-import { LevelConfig, QuestionContent } from '../levels/levelData';
+import { LevelConfig, QuestionContent, MovingPlatformDef } from '../levels/levelData';
 import { LEVEL_1 } from '../levels/levelData';
 import { LEVEL_2 } from '../levels/level2Data';
-import { LEVEL_3 } from '../levels/level3Data';
+import { LEVEL_NETWORK } from '../levels/levelNetworkData';
+import { LEVEL_CLOUD } from '../levels/levelCloudData';
+import { LEVEL_BOSS } from '../levels/levelBossData';
 
-const LEVELS: LevelConfig[] = [LEVEL_1, LEVEL_2, LEVEL_3];
+const LEVELS: LevelConfig[] = [LEVEL_1, LEVEL_2, LEVEL_NETWORK, LEVEL_CLOUD, LEVEL_BOSS];
+
+interface ActiveMovingPlatform {
+  sprite: Phaser.Physics.Arcade.Image;
+  def: MovingPlatformDef;
+  min: number;
+  max: number;
+  dir: number;
+  prevX: number;
+  prevY: number;
+}
 
 interface GameSceneData {
   levelIndex?: number;
@@ -45,6 +58,7 @@ export class GameScene extends Phaser.Scene {
   private p2projectilesGroup!: Phaser.Physics.Arcade.Group;
 
   private enemies: Enemy[] = [];
+  private movingPlatforms: ActiveMovingPlatform[] = [];
   private ceoEnemy?: CeoEnemy;
   private questionBlockStates: Map<string, boolean> = new Map();
 
@@ -97,6 +111,7 @@ export class GameScene extends Phaser.Scene {
     this.p2Out = false;
     this.bossDefeated = false;
     this.enemies = [];
+    this.movingPlatforms = [];
     this.ceoEnemy = undefined;
     this.questionBlockStates.clear();
     this.comboCount = 0;
@@ -170,6 +185,8 @@ export class GameScene extends Phaser.Scene {
       if (upgrades.fasterFire) this.player2.applyUpgradeFire();
     }
 
+    this.createMovingPlatforms(lv);
+    this.createFans(lv);
     this.createEnemies(lv);
     this.createPickups(lv);
     this.createVpnZones(lv);
@@ -205,9 +222,11 @@ export class GameScene extends Phaser.Scene {
   private createBackground(theme: string, worldW: number, worldH: number): void {
     const suffix  = theme === 'serverroom' ? 'server'
                   : theme === 'datacenter' ? 'data'
+                  : theme === 'cloud'      ? 'cloud'
                   : 'office';
     const farKey  = theme === 'serverroom' ? 'background_serverroom'
                   : theme === 'datacenter' ? 'background_datacenter'
+                  : theme === 'cloud'      ? 'background_cloud'
                   : 'background';
     const midKey  = `background_mid_${suffix}`;
     const nearKey = `background_near_${suffix}`;
@@ -285,6 +304,106 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private createMovingPlatforms(lv: LevelConfig): void {
+    for (const def of lv.movingPlatforms) {
+      // 3 tiles wide, same plank frame as the static one-way platforms
+      const x = def.col * TILE_SIZE + TILE_SIZE * 1.5;
+      const y = def.row * TILE_SIZE;
+      const img = this.physics.add.image(x, y, 'tileset', 5);
+      img.setDisplaySize(TILE_SIZE * 3, 6);
+      img.setDepth(1);
+      const body = img.body as Phaser.Physics.Arcade.Body;
+      body.setAllowGravity(false);
+      body.setImmovable(true);
+
+      const start = def.axis === 'x' ? x : y;
+      const mp: ActiveMovingPlatform = {
+        sprite: img,
+        def,
+        min: start,
+        max: start + def.range * TILE_SIZE,
+        dir: 1,
+        prevX: x,
+        prevY: y
+      };
+      this.movingPlatforms.push(mp);
+
+      // One-way from above: pass when the player's feet are at or above the
+      // plank — a velocity check alone would drop riders off platforms that
+      // move upward (separation zeroes/negates velocity.y).
+      const fromAbove: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (pl) => {
+        const pb = (pl as Phaser.Physics.Arcade.Sprite).body as Phaser.Physics.Arcade.Body;
+        return pb.bottom <= body.top + 10;
+      };
+      this.physics.add.collider(this.player, img, undefined, fromAbove);
+      if (this.player2) this.physics.add.collider(this.player2, img, undefined, fromAbove);
+    }
+  }
+
+  private updateMovingPlatforms(): void {
+    for (const mp of this.movingPlatforms) {
+      const body = mp.sprite.body as Phaser.Physics.Arcade.Body;
+      const pos = mp.def.axis === 'x' ? mp.sprite.x : mp.sprite.y;
+      if (pos >= mp.max && mp.dir > 0) mp.dir = -1;
+      if (pos <= mp.min && mp.dir < 0) mp.dir = 1;
+      if (mp.def.axis === 'x') body.setVelocityX(mp.dir * mp.def.speed);
+      else body.setVelocityY(mp.dir * mp.def.speed);
+
+      // Carry riders: apply the platform's frame delta to anyone standing on
+      // it (Arcade physics has no platform friction of its own).
+      const dx = mp.sprite.x - mp.prevX;
+      const dy = mp.sprite.y - mp.prevY;
+      if (dx !== 0 || dy > 0) {
+        for (const p of [this.player, this.player2]) {
+          if (!p || p.isDead) continue;
+          const pb = p.body as Phaser.Physics.Arcade.Body;
+          const standing =
+            pb.bottom >= body.top - 2 && pb.bottom <= body.top + 6 &&
+            pb.right > body.left && pb.left < body.right &&
+            pb.velocity.y >= 0;
+          if (standing) {
+            p.x += dx;
+            if (dy > 0) p.y += dy;
+          }
+        }
+      }
+      mp.prevX = mp.sprite.x;
+      mp.prevY = mp.sprite.y;
+    }
+  }
+
+  private createFans(lv: LevelConfig): void {
+    for (const def of lv.fans) {
+      const x = def.col * TILE_SIZE + TILE_SIZE / 2;
+      const y = def.row * TILE_SIZE + TILE_SIZE / 2;
+      const fan = this.add.sprite(x, y, 'fan');
+      fan.play('fan_spin');
+      fan.setDepth(2);
+
+      // Updraft column above the fan
+      const zone = this.add.zone(x, y - TILE_SIZE * 2, 14, TILE_SIZE * 4);
+      this.physics.add.existing(zone, true);
+
+      const boost = (playerRef: Player): Phaser.Types.Physics.Arcade.ArcadePhysicsCallback => () => {
+        const pb = playerRef.body as Phaser.Physics.Arcade.Body;
+        if (pb.velocity.y > -260) {
+          playerRef.setVelocityY(-520);
+          AudioSystem.getInstance().playFanBoost();
+        }
+      };
+      this.physics.add.overlap(this.player, zone, boost(this.player));
+      if (this.player2) this.physics.add.overlap(this.player2, zone, boost(this.player2));
+
+      // drifting air-flow hint
+      const puff = this.add.text(x, y - 22, '≈', {
+        fontSize: '8px', color: '#bcd6ee', fontFamily: 'monospace'
+      }).setOrigin(0.5).setDepth(2).setAlpha(0.8);
+      this.tweens.add({
+        targets: puff, y: y - 44, alpha: 0, duration: 900, repeat: -1, ease: 'Quad.easeOut'
+      });
+    }
+  }
+
   private createEnemies(lv: LevelConfig): void {
     for (const def of lv.enemies) {
       const x = def.tileX * TILE_SIZE + TILE_SIZE / 2;
@@ -332,6 +451,15 @@ export class GameScene extends Phaser.Scene {
           bc.init();
           this.enemies.push(bc);
           this.enemyGroup.add(bc);
+          break;
+        }
+        case 'virus': {
+          const v = new Virus(this, x, y);
+          v.init();
+          this.physics.add.collider(v, this.groundLayer);
+          this.physics.add.collider(v, this.platformGroup);
+          this.enemies.push(v);
+          this.enemyGroup.add(v);
           break;
         }
         case 'ceo': {
@@ -533,6 +661,9 @@ export class GameScene extends Phaser.Scene {
         const dead = (e as CeoEnemy).takeBossHit();
         if (dead) this.onBossDead();
       } else {
+        if (e instanceof Virus && e.shouldSplit()) {
+          this.spawnMiniViruses(enemySprite.x, enemySprite.y);
+        }
         e.stomp();
         this.onEnemyKilled(e, false);
       }
@@ -548,6 +679,25 @@ export class GameScene extends Phaser.Scene {
         else this.handlePlayerDeath();
       }
     }
+  }
+
+  // Ein gestompter großer Virus "verbreitet sich": zwei schnellere
+  // Mini-Viren flitzen in beide Richtungen davon. Deferred by a tick so no
+  // bodies are created mid-physics-step.
+  private spawnMiniViruses(x: number, y: number): void {
+    this.time.delayedCall(0, () => {
+      if (this.gameOver || this.levelComplete) return;
+      for (const dir of [-1, 1]) {
+        const mini = new Virus(this, x + dir * 8, y - 2, true);
+        mini.init();
+        mini.setVelocityX(dir * 85);
+        mini.setFlipX(dir > 0);
+        this.physics.add.collider(mini, this.groundLayer);
+        this.physics.add.collider(mini, this.platformGroup);
+        this.enemies.push(mini);
+        this.enemyGroup.add(mini);
+      }
+    });
   }
 
   private onEnemyKilled(e: Enemy, byProjectile: boolean): void {
@@ -640,6 +790,12 @@ export class GameScene extends Phaser.Scene {
         for (let i = 0; i < 5; i++) this.scoreSystem.addDoc();
         audio.playDocCollect();
         this.showScorePopup(playerRef.x, playerRef.y - 8, 50, 'x5 DOCS!');
+        break;
+      case 'hotfix':
+        // Hotfix eingespielt — die Uhr springt 20 Minuten zurück
+        this.clockSystem.rewind(20);
+        audio.playPowerUp();
+        this.showScorePopup(playerRef.x, playerRef.y - 20, 0, 'HOTFIX! -20 MIN');
         break;
     }
   }
@@ -814,6 +970,8 @@ export class GameScene extends Phaser.Scene {
 
     this.clockSystem.update(delta);
     const escalated = this.clockSystem.isEscalated();
+
+    this.updateMovingPlatforms();
 
     // Combo decay
     if (this.comboCount > 0) {

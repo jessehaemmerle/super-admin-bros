@@ -21,9 +21,13 @@ export class BootScene extends Phaser.Scene {
     this.generateExplosion();
     this.generateBackground();
     this.generateBuggyCode();
+    this.generateVirus();
+    this.generateFan();
+    this.generateHotfix();
     this.generateCeo();
     this.generateBackgroundServerroom();
     this.generateBackgroundDatacenter();
+    this.generateBackgroundCloud();
     this.generateMidNearLayers();
 
     this.scene.start('MenuScene');
@@ -1229,6 +1233,137 @@ export class BootScene extends Phaser.Scene {
     });
   }
 
+  private generateVirus(): void {
+    // 2 frames × 16×16 = 32×16 — green blob with angry eyes and spikes
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+
+    const drawVirus = (ox: number, squish: boolean) => {
+      const top = squish ? 6 : 4;
+      // blob body
+      g.fillStyle(0x33bb33);
+      g.fillRect(ox + 2, top + 2, 12, 14 - top - 2);
+      g.fillRect(ox + 3, top, 10, 14 - top);
+      // belly highlight
+      g.fillStyle(0x55dd55);
+      g.fillRect(ox + 4, top + 1, 8, 3);
+      // bottom shade
+      g.fillStyle(0x1e8a1e);
+      g.fillRect(ox + 2, 12, 12, 2);
+      // spikes on top
+      g.fillStyle(0x1e8a1e);
+      g.fillRect(ox + 4, top - 2, 2, 2);
+      g.fillRect(ox + 7, top - 2, 2, 2);
+      g.fillRect(ox + 10, top - 2, 2, 2);
+      // eyes
+      g.fillStyle(0xffffff);
+      g.fillRect(ox + 4, top + 3, 3, 3);
+      g.fillRect(ox + 9, top + 3, 3, 3);
+      g.fillStyle(0x111111);
+      g.fillRect(ox + 5, top + 4, 2, 2);
+      g.fillRect(ox + 10, top + 4, 2, 2);
+      // angry mouth
+      g.fillStyle(0x0a4a0a);
+      g.fillRect(ox + 6, top + 7, 4, 1);
+      // feet
+      g.fillStyle(0x1e8a1e);
+      g.fillRect(ox + 3, 14, 3, 2);
+      g.fillRect(ox + 10, 14, 3, 2);
+    };
+
+    drawVirus(0, false);
+    drawVirus(16, true);
+
+    g.generateTexture('virus', 32, 16);
+    g.destroy();
+    this.sliceSheet('virus', 16, 16);
+
+    this.anims.create({
+      key: 'virus_walk',
+      frames: this.anims.generateFrameNumbers('virus', { start: 0, end: 1 }),
+      frameRate: 6,
+      repeat: -1
+    });
+  }
+
+  private generateFan(): void {
+    // 2 frames × 16×16 = 32×16 — server fan with rotating blades
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+
+    const drawFan = (ox: number, diagonal: boolean) => {
+      // housing
+      g.fillStyle(0x3a4250);
+      g.fillRect(ox + 1, 1, 14, 14);
+      g.fillStyle(0x4c5666);
+      g.fillRect(ox + 1, 1, 14, 2);
+      g.fillStyle(0x2a303a);
+      g.fillRect(ox + 1, 13, 14, 2);
+      // corner screws
+      g.fillStyle(0x8a94a4);
+      g.fillRect(ox + 2, 2, 1, 1); g.fillRect(ox + 13, 2, 1, 1);
+      g.fillRect(ox + 2, 13, 1, 1); g.fillRect(ox + 13, 13, 1, 1);
+      // dark opening
+      g.fillStyle(0x14181e);
+      g.fillRect(ox + 3, 3, 10, 10);
+      // blades (two rotation states)
+      g.fillStyle(0x9ab0c8);
+      if (diagonal) {
+        g.fillRect(ox + 4, 4, 3, 3);
+        g.fillRect(ox + 9, 4, 3, 3);
+        g.fillRect(ox + 4, 9, 3, 3);
+        g.fillRect(ox + 9, 9, 3, 3);
+      } else {
+        g.fillRect(ox + 7, 3, 2, 4);
+        g.fillRect(ox + 7, 9, 2, 4);
+        g.fillRect(ox + 3, 7, 4, 2);
+        g.fillRect(ox + 9, 7, 4, 2);
+      }
+      // hub
+      g.fillStyle(0xd0d8e4);
+      g.fillRect(ox + 7, 7, 2, 2);
+    };
+
+    drawFan(0, false);
+    drawFan(16, true);
+
+    g.generateTexture('fan', 32, 16);
+    g.destroy();
+    this.sliceSheet('fan', 16, 16);
+
+    this.anims.create({
+      key: 'fan_spin',
+      frames: this.anims.generateFrameNumbers('fan', { start: 0, end: 1 }),
+      frameRate: 12,
+      repeat: -1
+    });
+  }
+
+  private generateHotfix(): void {
+    // 16×16 — green patch/bandage with a white plus (rewinds the clock)
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+
+    g.fillStyle(0x1b7a2f);
+    g.fillRect(2, 2, 12, 12);
+    g.fillStyle(0x27a842);
+    g.fillRect(3, 3, 10, 10);
+    // stitch dots along the edge
+    g.fillStyle(0x1b7a2f);
+    g.fillRect(4, 4, 1, 1); g.fillRect(11, 4, 1, 1);
+    g.fillRect(4, 11, 1, 1); g.fillRect(11, 11, 1, 1);
+    // white plus
+    g.fillStyle(0xffffff);
+    g.fillRect(7, 4, 2, 8);
+    g.fillRect(4, 7, 8, 2);
+    // little clock hand hint (top-left sparkle)
+    g.fillStyle(0xd0ffd8);
+    g.fillRect(3, 3, 2, 1);
+
+    g.generateTexture('hotfix', 16, 16);
+    g.destroy();
+  }
+
   private generateCeo(): void {
     // 2 frames × 24×32 = 48×32
     const g = this.make.graphics({ x: 0, y: 0 }, false);
@@ -1448,6 +1583,43 @@ export class BootScene extends Phaser.Scene {
     g.destroy();
   }
 
+  private generateBackgroundCloud(): void {
+    // Bright open sky for the cloud level.
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+
+    // Sky gradient in three bands
+    g.fillStyle(0x6db6e8); g.fillRect(0, 0, 480, 270);
+    g.fillStyle(0x84c4ee); g.fillRect(0, 90, 480, 180);
+    g.fillStyle(0x9fd4f4); g.fillRect(0, 180, 480, 90);
+
+    // Sun (top right) with glow
+    g.fillStyle(0xfff2b8); g.fillCircle(408, 46, 26);
+    g.fillStyle(0xffe36e); g.fillCircle(408, 46, 20);
+    g.fillStyle(0xfff6d8); g.fillCircle(402, 40, 6);
+
+    // Distant cloud banks
+    g.fillStyle(0xffffff, 0.85);
+    const clouds: [number, number, number][] = [
+      [40, 60, 34], [150, 100, 42], [260, 50, 30],
+      [330, 130, 46], [90, 180, 38], [230, 210, 44], [420, 200, 36]
+    ];
+    for (const [cx, cy, w] of clouds) {
+      g.fillRect(cx, cy, w, 8);
+      g.fillRect(cx - 8, cy + 5, w + 16, 7);
+      g.fillRect(cx + 6, cy - 5, w - 12, 6);
+    }
+
+    // Tiny distant "cloud servers" drifting between the clouds
+    g.fillStyle(0xd8e4f0);
+    g.fillRect(120, 70, 14, 10); g.fillRect(300, 170, 14, 10); g.fillRect(60, 230, 14, 10);
+    g.fillStyle(0x33dd66);
+    g.fillRect(122, 72, 2, 2); g.fillRect(302, 172, 2, 2); g.fillRect(62, 232, 2, 2);
+
+    g.generateTexture('background_cloud', 480, 270);
+    g.destroy();
+  }
+
   // ── Per-theme parallax layers ────────────────────────────────────────────
   // Each theme gets its own MID (mid-distance structures) and NEAR (foreground
   // silhouettes) layer so office furniture never bleeds into the server/data
@@ -1458,6 +1630,48 @@ export class BootScene extends Phaser.Scene {
     this.makeOfficeMid();  this.makeOfficeNear();
     this.makeServerMid();  this.makeServerNear();
     this.makeDataMid();    this.makeDataNear();
+    this.makeCloudMid();   this.makeCloudNear();
+  }
+
+  private makeCloudMid(): void {
+    // Fluffy mid-distance clouds carrying little server crates.
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+    for (let x = 10; x < 480; x += 140) {
+      const y = 90 + ((x / 140 | 0) % 3) * 50;
+      g.fillStyle(0xffffff);
+      g.fillRect(x, y, 76, 14);
+      g.fillRect(x - 12, y + 9, 100, 12);
+      g.fillRect(x + 14, y - 8, 44, 10);
+      // server crate riding the cloud
+      g.fillStyle(0x4c5666); g.fillRect(x + 28, y - 22, 20, 15);
+      g.fillStyle(0x2a303a); g.fillRect(x + 30, y - 20, 16, 11);
+      g.fillStyle(0x33dd66); g.fillRect(x + 31, y - 18, 2, 2);
+      g.fillStyle(0x44aaff); g.fillRect(x + 35, y - 18, 2, 2);
+      // antenna
+      g.fillStyle(0x8a94a4); g.fillRect(x + 44, y - 30, 1, 8);
+      g.fillStyle(0xff5555); g.fillRect(x + 43, y - 31, 3, 2);
+    }
+    g.generateTexture('background_mid_cloud', 480, 270);
+    g.destroy();
+  }
+
+  private makeCloudNear(): void {
+    // Foreground cloud wisps drifting past.
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.clear();
+    g.fillStyle(0xffffff);
+    for (let x = -20; x < 480; x += 110) {
+      const y = 200 + ((x / 110 | 0) % 2) * 40;
+      g.fillRect(x, y, 90, 10);
+      g.fillRect(x + 12, y - 6, 56, 8);
+      g.fillRect(x - 10, y + 7, 110, 8);
+    }
+    // a couple of high wisps
+    g.fillRect(60, 30, 70, 6); g.fillRect(76, 25, 40, 6);
+    g.fillRect(300, 55, 80, 6); g.fillRect(318, 50, 46, 6);
+    g.generateTexture('background_near_cloud', 480, 270);
+    g.destroy();
   }
 
   private makeOfficeMid(): void {

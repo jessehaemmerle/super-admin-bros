@@ -111,6 +111,9 @@ export const LEVEL_2: LevelConfig = {
     { col: 185, row: 9,  content: 'backup_tape' }
   ],
   platforms: PLATFORMS,
+  // Ein Lüfter als sanfte Einführung der Mechanik vor Level 3
+  movingPlatforms: [],
+  fans: [{ col: 128, row: 13 }],
   enemies: [
     { type: 'ticket',       tileX: 12,  tileY: 14 },
     { type: 'printer',      tileX: 30,  tileY: 13 },
