@@ -17,7 +17,6 @@ export class GameOverScene extends Phaser.Scene {
   // Initialen-Eingabe
   private enteringInitials = false;
   private initials = '';
-  private initialsCursor = 0;
   private initialsText!: Phaser.GameObjects.Text;
 
   constructor() {
@@ -28,7 +27,6 @@ export class GameOverScene extends Phaser.Scene {
     this.blinkTimer = 0;
     this.gameOverData = data;
     this.initials = '';
-    this.initialsCursor = 0;
     this.enteringInitials = false;
   }
 

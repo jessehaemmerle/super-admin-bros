@@ -5,6 +5,7 @@ export class AudioSystem {
   private musicPlaying = false;
   private masterGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
+  private noiseBuffer: AudioBuffer | null = null;
   private musicScheduleTimer: ReturnType<typeof setTimeout> | null = null;
   private musicStartTime = 0;
   private loopLength = 0;
@@ -295,19 +296,20 @@ export class AudioSystem {
       });
     });
 
-    // Hi-hat pattern
-    for (let i = 0; i < totalBars * 4; i++) {
-      const hihatTime = t + i * beat * 0.5;
-      const hihatCtx = this.getContext();
-      const bufferSize = hihatCtx.sampleRate * 0.03;
-      const buffer = hihatCtx.createBuffer(1, bufferSize, hihatCtx.sampleRate);
-      const data = buffer.getChannelData(0);
+    // Hi-hat pattern — one shared decaying-noise buffer for every tick
+    if (!this.noiseBuffer) {
+      const bufferSize = Math.floor(ctx.sampleRate * 0.03);
+      this.noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = this.noiseBuffer.getChannelData(0);
       for (let j = 0; j < bufferSize; j++) {
         data[j] = (Math.random() * 2 - 1) * (1 - j / bufferSize);
       }
-      const source = hihatCtx.createBufferSource();
-      source.buffer = buffer;
-      const hiGain = hihatCtx.createGain();
+    }
+    for (let i = 0; i < totalBars * 4; i++) {
+      const hihatTime = t + i * beat * 0.5;
+      const source = ctx.createBufferSource();
+      source.buffer = this.noiseBuffer;
+      const hiGain = ctx.createGain();
       hiGain.gain.setValueAtTime(i % 2 === 0 ? 0.12 : 0.06, hihatTime);
       hiGain.gain.exponentialRampToValueAtTime(0.001, hihatTime + 0.03);
       source.connect(hiGain);

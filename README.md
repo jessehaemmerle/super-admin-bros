@@ -1,3 +1,54 @@
-# super-admin-bros
-Super Admin Bros - Hank's Mission um den Feierabend zu retten! 
-ä
+# Super Admin Bros.
+
+Hanks Mission, um den Feierabend zu retten! Ein 2D-Jump'n'Run im Retro-Stil:
+IT-Admin Hank kämpft sich zwischen 14:00 und 17:00 Uhr durch Büro, Serverraum
+und Rechenzentrum, stompt Tickets, weicht Druckern und Phishing-Mails aus und
+stellt sich am Ende dem CEO — bevor die Uhr 17:00 schlägt und der
+Bereitschaftsdienst ruft.
+
+Alle Grafiken und die komplette Chiptune-Musik werden zur Laufzeit prozedural
+erzeugt (Pixel-Art per Phaser-Graphics, Sound per Web Audio API) — das Spiel
+kommt ohne einzige Asset-Datei aus.
+
+## Features
+
+- 3 Level (Büro, Serverraum, Rechenzentrum) mit Parallax-Hintergründen
+- Echtzeit-Uhr: 3 Minuten pro Level, Eskalation ab 16:00, Game Over um 17:00
+- Power-Ups: Kaffee (groß), Sudo-Flower (kill -9-Projektile), Energy-Drink,
+  Backup-Tape (+1 Leben)
+- Combo-System beim Stompen, Doku-Seiten sammeln, Top-5-Highscores (localStorage)
+- Shop zwischen den Leveln (Extra-Leben, Turbo-Schuhe, Feuerrate, Startschild)
+- CEO-Bosskampf mit 3 Phasen
+- 2-Spieler-Koop am selben Keyboard, Touch-Steuerung auf Mobilgeräten
+- Geheimraum, VPN-Abkürzungen, Checkpoints
+
+## Steuerung
+
+| Aktion | Spieler 1 | Spieler 2 |
+| --- | --- | --- |
+| Bewegen | ← → oder A D | J L |
+| Springen | ↑ / W / Leertaste | I |
+| Sprint | Shift | – |
+| Sudo-Feuer | Strg / X | Z |
+| VPN nutzen | ↓ / S | K |
+
+## Entwicklung
+
+```bash
+npm install
+npm run dev       # Dev-Server auf http://localhost:5173
+npm run build     # Typecheck + Produktions-Build nach dist/
+npm run preview   # Produktions-Build lokal testen
+```
+
+Docker:
+
+```bash
+docker compose up --build   # Nginx serviert den Build
+```
+
+## Tech-Stack
+
+- [Phaser 3](https://phaser.io/) (Arcade Physics)
+- TypeScript + Vite
+- Web Audio API für Musik und Soundeffekte

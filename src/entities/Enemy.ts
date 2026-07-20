@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 
 export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
-  protected speed = 50;
   public isDead = false;
   protected scoreValue = 100;
 

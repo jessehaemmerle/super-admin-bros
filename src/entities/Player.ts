@@ -41,8 +41,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private jumpBufferTimer = 0;
   private jumpKeyHeld = false;
   private rising = false;
-  private canJump = true;
-  private coyoteActive = false;
   private prevTouchJump = false;
 
   // Timers
@@ -56,6 +54,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private controlsInverted = false;
   private fireTimer = 0;
   private fireCooldown = 300;
+  private speedUpgrade = false;
 
   // Callbacks / groups
   private projectilesGroup?: Phaser.Physics.Arcade.Group;
@@ -307,7 +306,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Coyote time tracking
     if (onGround) {
       this.lastGrounded = now;
-      this.coyoteActive = false;
     }
 
     const canCoyoteJump = (now - this.lastGrounded) <= PHYSICS.COYOTE_TIME;
@@ -374,8 +372,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const moveRight = this.controlsInverted ? leftKey : rightKey;
 
     // Horizontal movement
-    const hasSpeedUpgrade = (this as unknown as { _upgSpeed?: boolean })._upgSpeed === true;
-    const baseSpeed = hasSpeedUpgrade ? PHYSICS.RUN_SPEED * 1.25 : PHYSICS.RUN_SPEED;
+    const baseSpeed = this.speedUpgrade ? PHYSICS.RUN_SPEED * 1.25 : PHYSICS.RUN_SPEED;
     const maxSpeed = (this.energyDrinkActive || sprintKey) ? PHYSICS.SPRINT_SPEED : baseSpeed;
     const accel = onGround ? PHYSICS.ACCEL_GROUND : PHYSICS.ACCEL_GROUND * PHYSICS.AIR_CONTROL;
     const friction = onGround ? PHYSICS.FRICTION_GROUND : PHYSICS.FRICTION_GROUND * PHYSICS.AIR_CONTROL;
@@ -423,7 +420,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Jump execution
     if (this.jumpBufferTimer > 0 && (onGround || canCoyoteJump)) {
       this.jumpBufferTimer = 0;
-      this.coyoteActive = false;
       body.velocity.y = PHYSICS.JUMP_VELOCITY;
       this.rising = true;
       this.playerState = 'jumping';
@@ -519,9 +515,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   applyUpgradeSpeed(): void {
-    // Permanent speed boost via fireCooldown and sprint baseline
-    // We store it in a flag and it's read in update via PHYSICS constants override
-    (this as unknown as { _upgSpeed: boolean })._upgSpeed = true;
+    this.speedUpgrade = true;
   }
 
   applyUpgradeFire(): void {

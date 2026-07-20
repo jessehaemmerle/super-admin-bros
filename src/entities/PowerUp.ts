@@ -5,6 +5,7 @@ export type PowerUpType = 'coffee' | 'sudo_flower' | 'energy_drink' | 'backup_ta
 export class PowerUp extends Phaser.Physics.Arcade.Sprite {
   public powerType: PowerUpType;
   private collected = false;
+  private spawning = false;
   private bobTimer = 0;
   private startY: number;
 
@@ -23,8 +24,9 @@ export class PowerUp extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(5);
   }
 
-  update(delta: number): void {
-    if (this.collected) return;
+  // Called by the group (runChildUpdate) — Phaser passes (time, delta).
+  update(_time: number, delta: number): void {
+    if (this.collected || this.spawning) return;
     this.bobTimer += delta / 1000;
     this.y = this.startY + Math.sin(this.bobTimer * 3) * 2;
   }
@@ -49,13 +51,17 @@ export class PowerUp extends Phaser.Physics.Arcade.Sprite {
   spawnFromBlock(blockX: number, blockY: number): void {
     this.x = blockX;
     this.y = blockY - 16;
-    this.startY = blockY - 16;
-    // Animate upward spawn
+    // The bob in update() anchors on startY, so it must match the tween's
+    // end position or the item snaps back down once the tween finishes.
+    this.startY = blockY - 24;
+    // Animate upward spawn; the bob is paused so it can't override the tween.
+    this.spawning = true;
     this.scene.tweens.add({
       targets: this,
       y: blockY - 24,
       duration: 200,
-      ease: 'Quad.easeOut'
+      ease: 'Quad.easeOut',
+      onComplete: () => { this.spawning = false; }
     });
   }
 }

@@ -20,6 +20,7 @@ export class LevelTransitionScene extends Phaser.Scene {
 
   init(d: TransitionData): void {
     this.transitionData = d;
+    this._started = false;
   }
 
   create(): void {
@@ -74,10 +75,7 @@ export class LevelTransitionScene extends Phaser.Scene {
       });
     });
 
-    // Counters
-    const { levelIndex, numPlayers } = this.transitionData;
-
-    if (levelIndex > 1) {
+    if (this.transitionData.levelIndex > 1) {
       this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, `Ticket geschlossen ✓`, {
         fontSize: '6px',
         color: '#22cc44',
@@ -91,10 +89,6 @@ export class LevelTransitionScene extends Phaser.Scene {
     // Or press any key
     this.input.keyboard?.once('keydown', () => this.startLevel());
     this.input.once('pointerdown', () => this.startLevel());
-
-    // Store so we don't double-start
-    this._started = false;
-    void numPlayers; // used in startLevel via data
   }
 
   private _started = false;

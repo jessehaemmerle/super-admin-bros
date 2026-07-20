@@ -1,7 +1,19 @@
-import { LevelConfig, DocDef } from './levelData';
+import { LevelConfig, DocDef, PlatformDef, stampPlatforms } from './levelData';
 
 const W = 220;
 const H = 17;
+
+const PLATFORMS: PlatformDef[] = [
+  { startCol: 15, endCol: 20, row: 10 },
+  { startCol: 30, endCol: 36, row: 9 },
+  { startCol: 58, endCol: 64, row: 7 },
+  { startCol: 78, endCol: 84, row: 10 },
+  { startCol: 95, endCol: 102, row: 8 },
+  { startCol: 130, endCol: 137, row: 11 },
+  { startCol: 155, endCol: 162, row: 9 },
+  { startCol: 180, endCol: 188, row: 11 },
+  { startCol: 200, endCol: 208, row: 10 }
+];
 
 function buildData(): number[][] {
   const d: number[][] = Array.from({ length: H }, () => new Array(W).fill(0));
@@ -69,14 +81,7 @@ function buildData(): number[][] {
   for (let col = 81; col <= 84; col++) d[14][col] = 6;
 
   // Platforms
-  const plats: [number, number, number][] = [
-    [15, 20, 10], [30, 36, 9], [58, 64, 7],
-    [78, 84, 10], [95, 102, 8], [130, 137, 11],
-    [155, 162, 9], [180, 188, 11], [200, 208, 10]
-  ];
-  for (const [sc, ec, row] of plats) {
-    for (let col = sc; col <= ec; col++) d[row][col] = 5;
-  }
+  stampPlatforms(d, PLATFORMS, W);
 
   return d;
 }
@@ -105,17 +110,7 @@ export const LEVEL_2: LevelConfig = {
     { col: 145, row: 10, content: 'doc' },
     { col: 185, row: 9,  content: 'backup_tape' }
   ],
-  platforms: [
-    { startCol: 15, endCol: 20, row: 10 },
-    { startCol: 30, endCol: 36, row: 9 },
-    { startCol: 58, endCol: 64, row: 7 },
-    { startCol: 78, endCol: 84, row: 10 },
-    { startCol: 95, endCol: 102, row: 8 },
-    { startCol: 130, endCol: 137, row: 11 },
-    { startCol: 155, endCol: 162, row: 9 },
-    { startCol: 180, endCol: 188, row: 11 },
-    { startCol: 200, endCol: 208, row: 10 }
-  ],
+  platforms: PLATFORMS,
   enemies: [
     { type: 'ticket',       tileX: 12,  tileY: 14 },
     { type: 'printer',      tileX: 30,  tileY: 13 },

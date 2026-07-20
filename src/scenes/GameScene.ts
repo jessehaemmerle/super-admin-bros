@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE_SIZE, COMBO, TOTAL_LEVELS } from '../config';
+import { TILE_SIZE, COMBO, TOTAL_LEVELS, PHYSICS } from '../config';
 import { Player, PlayerConfig, TouchInput } from '../entities/Player';
 import { Ticket } from '../entities/enemies/Ticket';
 import { Printer } from '../entities/enemies/Printer';
@@ -45,7 +45,6 @@ export class GameScene extends Phaser.Scene {
   private p2projectilesGroup!: Phaser.Physics.Arcade.Group;
 
   private enemies: Enemy[] = [];
-  private printers: Printer[] = [];
   private ceoEnemy?: CeoEnemy;
   private questionBlockStates: Map<string, boolean> = new Map();
 
@@ -98,7 +97,6 @@ export class GameScene extends Phaser.Scene {
     this.p2Out = false;
     this.bossDefeated = false;
     this.enemies = [];
-    this.printers = [];
     this.ceoEnemy = undefined;
     this.questionBlockStates.clear();
     this.comboCount = 0;
@@ -145,7 +143,7 @@ export class GameScene extends Phaser.Scene {
 
     this.enemyGroup        = this.physics.add.group();
     this.docGroup          = this.physics.add.staticGroup();
-    this.powerUpGroup      = this.physics.add.group();
+    this.powerUpGroup      = this.physics.add.group({ runChildUpdate: true });
     this.projectilesGroup  = this.physics.add.group();
     this.p2projectilesGroup= this.physics.add.group();
 
@@ -309,8 +307,7 @@ export class GameScene extends Phaser.Scene {
           this.physics.add.collider(p, this.platformGroup);
           this.enemies.push(p);
           this.enemyGroup.add(p);
-          this.printers.push(p);
-          this.setupPrinterBullets(p);
+          this.setupEnemyBullets(p.getBullets());
           break;
         }
         case 'phishing_mail': {
@@ -345,57 +342,32 @@ export class GameScene extends Phaser.Scene {
           this.ceoEnemy = ceo;
           this.enemies.push(ceo);
           this.enemyGroup.add(ceo);
-          this.setupCeoBullets(ceo);
+          this.setupEnemyBullets(ceo.getBullets());
           break;
         }
       }
     }
   }
 
-  private setupPrinterBullets(p: Printer): void {
-    const handleBulletHit = (bullet: Phaser.GameObjects.GameObject) => {
-      const sprite = bullet as Phaser.Physics.Arcade.Sprite;
-      if (!sprite.active) return;
-      sprite.destroy();
-    };
-
-    this.physics.add.overlap(this.player, p.getBullets(), (_pl, bullet) => {
-      if (this.player.isInvulnerable()) { (bullet as Phaser.Physics.Arcade.Sprite).destroy(); return; }
-      (bullet as Phaser.Physics.Arcade.Sprite).destroy();
-      const died = this.player.takeDamage();
-      if (died) this.handlePlayerDeath();
-    });
-
-    if (this.player2) {
-      this.physics.add.overlap(this.player2, p.getBullets(), (_pl, bullet) => {
-        if (this.player2!.isInvulnerable()) { (bullet as Phaser.Physics.Arcade.Sprite).destroy(); return; }
+  // Wires an enemy bullet group against both players and the ground.
+  // Bullets always vanish on contact; damage only lands if the player is
+  // vulnerable. Used for printer paper jams and CEO meeting requests alike.
+  private setupEnemyBullets(bullets: Phaser.Physics.Arcade.Group): void {
+    const hitPlayer = (playerRef: Player, onDeath: () => void): Phaser.Types.Physics.Arcade.ArcadePhysicsCallback =>
+      (_pl, bullet) => {
         (bullet as Phaser.Physics.Arcade.Sprite).destroy();
-        const died = this.player2!.takeDamage();
-        if (died) this.handleP2Death();
-      });
-    }
+        if (playerRef.isInvulnerable()) return;
+        const died = playerRef.takeDamage();
+        if (died) onDeath();
+      };
 
-    this.physics.add.collider(p.getBullets(), this.groundLayer, (bullet) => { handleBulletHit(bullet as Phaser.GameObjects.GameObject); });
-    // Projectiles vs the printer itself are already covered by the generic
-    // projectilesGroup ↔ enemyGroup overlap in setupCollisions().
-  }
-
-  private setupCeoBullets(ceo: CeoEnemy): void {
-    this.physics.add.overlap(this.player, ceo.getBullets(), (_pl, bullet) => {
-      if (this.player.isInvulnerable()) { (bullet as Phaser.Physics.Arcade.Sprite).destroy(); return; }
-      (bullet as Phaser.Physics.Arcade.Sprite).destroy();
-      const died = this.player.takeDamage();
-      if (died) this.handlePlayerDeath();
-    });
+    this.physics.add.overlap(this.player, bullets, hitPlayer(this.player, () => this.handlePlayerDeath()));
     if (this.player2) {
-      this.physics.add.overlap(this.player2, ceo.getBullets(), (_pl, bullet) => {
-        if (this.player2!.isInvulnerable()) { (bullet as Phaser.Physics.Arcade.Sprite).destroy(); return; }
-        (bullet as Phaser.Physics.Arcade.Sprite).destroy();
-        const died = this.player2!.takeDamage();
-        if (died) this.handleP2Death();
-      });
+      this.physics.add.overlap(this.player2, bullets, hitPlayer(this.player2, () => this.handleP2Death()));
     }
-    this.physics.add.collider(ceo.getBullets(), this.groundLayer, (b) => { (b as Phaser.Physics.Arcade.Sprite).destroy(); });
+    this.physics.add.collider(bullets, this.groundLayer, (bullet) => {
+      (bullet as Phaser.Physics.Arcade.Sprite).destroy();
+    });
   }
 
   private createPickups(lv: LevelConfig): void {
@@ -564,7 +536,7 @@ export class GameScene extends Phaser.Scene {
         e.stomp();
         this.onEnemyKilled(e, false);
       }
-      playerRef.setVelocityY(-250);
+      playerRef.setVelocityY(PHYSICS.STOMP_BOUNCE);
       AudioSystem.getInstance().playStomp();
     } else {
       // Invert BEFORE takeDamage: invertControls is a no-op while invulnerable,

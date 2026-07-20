@@ -1,7 +1,18 @@
-import { LevelConfig, DocDef } from './levelData';
+import { LevelConfig, DocDef, PlatformDef, stampPlatforms } from './levelData';
 
 const W = 180;
 const H = 17;
+
+const PLATFORMS: PlatformDef[] = [
+  { startCol: 10,  endCol: 16,  row: 11 },
+  { startCol: 22,  endCol: 28,  row: 10 },
+  { startCol: 41,  endCol: 47,  row: 9  },
+  { startCol: 68,  endCol: 74,  row: 8  },
+  { startCol: 83,  endCol: 90,  row: 10 },
+  { startCol: 98,  endCol: 106, row: 9  },
+  { startCol: 115, endCol: 122, row: 8  },
+  { startCol: 130, endCol: 138, row: 11 }
+];
 
 function buildData(): number[][] {
   const d: number[][] = Array.from({ length: H }, () => new Array(W).fill(0));
@@ -67,14 +78,7 @@ function buildData(): number[][] {
   for (let col = 91; col <= 95; col++) d[14][col] = 6;
 
   // Platforms
-  const plats: [number, number, number][] = [
-    [10, 16, 11], [22, 28, 10], [41, 47, 9],
-    [68, 74, 8], [83, 90, 10], [98, 106, 9],
-    [115, 122, 8], [130, 138, 11]
-  ];
-  for (const [sc, ec, row] of plats) {
-    for (let col = sc; col <= ec; col++) d[row][col] = 5;
-  }
+  stampPlatforms(d, PLATFORMS, W);
 
   return d;
 }
@@ -101,16 +105,7 @@ export const LEVEL_3: LevelConfig = {
     { col: 110, row: 10, content: 'backup_tape' },
     { col: 140, row: 7,  content: 'sudo_flower' }
   ],
-  platforms: [
-    { startCol: 10,  endCol: 16,  row: 11 },
-    { startCol: 22,  endCol: 28,  row: 10 },
-    { startCol: 41,  endCol: 47,  row: 9  },
-    { startCol: 68,  endCol: 74,  row: 8  },
-    { startCol: 83,  endCol: 90,  row: 10 },
-    { startCol: 98,  endCol: 106, row: 9  },
-    { startCol: 115, endCol: 122, row: 8  },
-    { startCol: 130, endCol: 138, row: 11 }
-  ],
+  platforms: PLATFORMS,
   enemies: [
     { type: 'ticket',       tileX: 5,   tileY: 14 },
     { type: 'buggy_code',   tileX: 25,  tileY: 10 },

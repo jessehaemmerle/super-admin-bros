@@ -23,19 +23,6 @@ export const CLOCK = {
   ESCALATION_HOUR: 16
 } as const;
 
-export const COLORS = {
-  SKY: 0x87ceeb,
-  GROUND: 0x4a4a4a,
-  BRICK: 0x6b7fa3,
-  QUESTION: 0xf5c842,
-  USED: 0x888888,
-  PLATFORM: 0x8b6914,
-  SPIKE: 0x222222,
-  VPN: 0x8b44cc,
-  CHECKPOINT: 0x22cc44,
-  GOAL: 0xdddddd
-} as const;
-
 export const COMBO = {
   TIMEOUT_MS: 2500,
   MAX_MULTIPLIER: 8

@@ -75,6 +75,27 @@ export interface LevelConfig {
 const L1_WIDTH = 200;
 const L1_HEIGHT = 17;
 
+// Single source of truth — used both to place the visual tiles in the map
+// data and as the one-way collision bodies in the LevelConfig.
+const L1_PLATFORMS: PlatformDef[] = [
+  { startCol: 23, endCol: 28, row: 11 },
+  { startCol: 50, endCol: 56, row: 9 },
+  { startCol: 62, endCol: 67, row: 12 },
+  { startCol: 94, endCol: 100, row: 10 },
+  { startCol: 127, endCol: 133, row: 8 },
+  { startCol: 142, endCol: 148, row: 11 },
+  { startCol: 167, endCol: 174, row: 12 }
+];
+
+// Writes a platform list into the tile grid as tile 5 (visual only).
+export function stampPlatforms(data: number[][], platforms: PlatformDef[], width: number): void {
+  for (const plat of platforms) {
+    for (let col = plat.startCol; col <= plat.endCol; col++) {
+      if (col < width) data[plat.row][col] = 5;
+    }
+  }
+}
+
 function buildLevel1Data(): number[][] {
   const data: number[][] = [];
   for (let r = 0; r < L1_HEIGHT; r++) {
@@ -132,20 +153,7 @@ function buildLevel1Data(): number[][] {
   data[14][193] = 9;
 
   // Platform tiles (visual)
-  const platforms: PlatformDef[] = [
-    { startCol: 23, endCol: 28, row: 11 },
-    { startCol: 50, endCol: 56, row: 9 },
-    { startCol: 62, endCol: 67, row: 12 },
-    { startCol: 94, endCol: 100, row: 10 },
-    { startCol: 127, endCol: 133, row: 8 },
-    { startCol: 142, endCol: 148, row: 11 },
-    { startCol: 167, endCol: 174, row: 12 }
-  ];
-  for (const plat of platforms) {
-    for (let col = plat.startCol; col <= plat.endCol; col++) {
-      if (col < L1_WIDTH) data[plat.row][col] = 5;
-    }
-  }
+  stampPlatforms(data, L1_PLATFORMS, L1_WIDTH);
 
   return data;
 }
@@ -164,15 +172,7 @@ export const LEVEL_1: LevelConfig = {
     { col: 129, row: 7,  content: 'sudo_flower' },
     { col: 169, row: 11, content: 'backup_tape' }
   ],
-  platforms: [
-    { startCol: 23, endCol: 28, row: 11 },
-    { startCol: 50, endCol: 56, row: 9 },
-    { startCol: 62, endCol: 67, row: 12 },
-    { startCol: 94, endCol: 100, row: 10 },
-    { startCol: 127, endCol: 133, row: 8 },
-    { startCol: 142, endCol: 148, row: 11 },
-    { startCol: 167, endCol: 174, row: 12 }
-  ],
+  platforms: L1_PLATFORMS,
   enemies: [
     { type: 'ticket',       tileX: 16,  tileY: 14 },
     { type: 'ticket',       tileX: 32,  tileY: 14 },
@@ -215,18 +215,3 @@ function buildLevel1Docs(): DocDef[] {
   ];
   return positions.map(([col, row]) => ({ col, row }));
 }
-
-// ─── Rückwärtskompatible Exporte (Level 1) ─────────────────────────────────
-
-export const LEVEL_WIDTH  = LEVEL_1.width;
-export const LEVEL_HEIGHT = LEVEL_1.height;
-export const LEVEL_DATA   = LEVEL_1.data;
-export const QUESTION_BLOCKS = LEVEL_1.questionBlocks;
-export const PLATFORMS    = LEVEL_1.platforms;
-export const ENEMIES      = LEVEL_1.enemies;
-export const DOC_POSITIONS = LEVEL_1.docPositions;
-export const VPN          = LEVEL_1.vpn!;
-export const CHECKPOINT_COL = LEVEL_1.checkpointCol;
-export const CHECKPOINT_ROW = LEVEL_1.checkpointRow;
-export const GOAL_COL     = LEVEL_1.goalCol;
-export const GOAL_ROW     = LEVEL_1.goalRow;
